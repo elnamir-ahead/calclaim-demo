@@ -1,0 +1,5 @@
+# Copy to backend.hcl (do not commit secrets). Bucket is created by deploy script / CI.
+#
+# bucket = "calclaim-tfstate-123456789012"
+# key    = "calclaim-demo/terraform.tfstate"
+# region = "us-east-1"

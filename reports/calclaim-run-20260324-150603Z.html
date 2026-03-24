@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CalcClaim demo report</title>
+<style>
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --accent: #1d4ed8;
+  --bad: #b91c1c;
+  --good: #15803d;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+  margin: 0;
+  padding: 1.5rem 1.25rem 3rem;
+}
+.wrap { max-width: 52rem; margin: 0 auto; }
+h1 { font-size: 1.65rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
+h2 { font-size: 1.2rem; font-weight: 650; margin: 2rem 0 0.75rem; padding-bottom: 0.35rem; border-bottom: 2px solid var(--border); }
+h3 { font-size: 1.05rem; font-weight: 650; margin: 1.25rem 0 0.5rem; }
+h4 { font-size: 0.95rem; font-weight: 650; margin: 1rem 0 0.35rem; color: #334155; }
+.meta {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+}
+.meta p { margin: 0.35rem 0; color: var(--muted); font-size: 0.95rem; }
+.meta strong { color: var(--text); }
+.lead { font-size: 1.02rem; color: #334155; margin: 0.75rem 0 1rem; line-height: 1.6; }
+.note { font-size: 0.9rem; color: var(--muted); font-style: italic; margin-top: 0.5rem; }
+ol.howto { margin: 0.5rem 0; padding-left: 1.35rem; color: #334155; }
+ol.howto li { margin: 0.35rem 0; }
+table.data { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+table.data th, table.data td { padding: 0.55rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+table.data th { background: #f1f5f9; font-weight: 600; color: #334155; }
+table.data tr:last-child td { border-bottom: none; }
+table.data code { font-size: 0.82rem; }
+code { background: #f1f5f9; padding: 0.12em 0.4em; border-radius: 4px; font-size: 0.88em; }
+pre.raw {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+}
+.card.fail { border-left: 4px solid var(--bad); }
+.card.ok { border-left: 4px solid var(--good); }
+.claim-ctx { font-size: 0.92rem; color: #475569; margin-bottom: 0.75rem; }
+.symptom { margin: 0.4rem 0 0.6rem; color: #334155; }
+ul.bullets { margin: 0.4rem 0; padding-left: 1.2rem; }
+ul.bullets li { margin: 0.25rem 0; }
+footer.files { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--muted); }
+@media print {
+  body { background: #fff; }
+  .card { break-inside: avoid; }
+}
+</style>
+</head><body><div class="wrap">
+<h1>CalcClaim demo report</h1>
+<div class="meta">
+<p><strong>When:</strong> 2026-03-24 15:06:07 UTC</p>
+<p><strong>Scenario:</strong> mixed — Typical mix of drugs, tiers, and plans (default demo).</p>
+</div>
+<h2>At a glance</h2>
+<p class="lead">This run tried <strong>10</strong> synthetic claim(s). <strong>None finished successfully</strong> — each one raised an exception before a normal adjudication outcome was returned. See <strong>Per claim</strong> below and <strong>Environment</strong> for likely fixes.</p>
+<p class="lead">Synthetic batch total plan liability (fake dollars): <strong>$1,360.00</strong>.</p>
+<h2>Quick stats</h2>
+<table class="data">
+<thead><tr><th>Question</th><th>Answer</th></tr></thead><tbody>
+<tr><td>How many claims?</td><td>10</td></tr>
+<tr><td>Finished without an exception?</td><td>0 yes, 10 no</td></tr>
+<tr><td>Approved (or approved with PA)?</td><td>0</td></tr>
+<tr><td>Stopped by governance (denied)?</td><td>0</td></tr>
+<tr><td>Needs review / unknown outcome?</td><td>0</td></tr>
+<tr><td>Reject-style outcomes?</td><td>0</td></tr>
+<tr><td>Audit rows captured (demo memory)?</td><td>30</td></tr>
+</tbody></table>
+<p class="note">“Governance denied” means the workflow returned before a normal paid/reject decision, often due to policy or guardrail configuration.</p>
+<h2>How to read this report</h2>
+<ol class="howto">
+<li><strong>Per claim</strong> — One section per claim: what was simulated, then outcome or error.</li>
+<li><strong>Environment</strong> — Non-secret settings; mismatches here usually explain errors.</li>
+<li><strong>Troubleshooting</strong> — Common messages and what to change in .env or AWS.</li>
+<li><strong>Audit trail</strong> — What the demo recorded (PII scrub, governance, etc.).</li>
+<li><strong>demo_output.json</strong> — Same run in JSON for tools and diffing.</li>
+</ol>
+<h2>Environment (non-secret)</h2>
+<table class="data">
+<thead><tr><th>Variable</th><th>Value</th><th>Why it matters</th></tr></thead><tbody>
+<tr><td><code>AWS_REGION</code></td><td>us-east-1</td><td>Default AWS region for SDK calls.</td></tr>
+<tr><td><code>BEDROCK_REGION</code></td><td>us-east-1</td><td>Region for Bedrock Converse / guardrails.</td></tr>
+<tr><td><code>BEDROCK_GUARDRAIL_ID</code></td><td>your-guardrail-id</td><td>Bedrock Guardrail resource ID (empty = skip guardrail on Converse).</td></tr>
+<tr><td><code>BEDROCK_GUARDRAIL_VERSION</code></td><td>DRAFT</td><td>Guardrail version (e.g. DRAFT or version number).</td></tr>
+<tr><td><code>AGENTCORE_AGENT_ID</code></td><td>your-agentcore-agent-id</td><td>Bedrock AgentCore agent ID (short alphanumeric).</td></tr>
+<tr><td><code>AGENTCORE_AGENT_ALIAS_ID</code></td><td>your-agentcore-alias-id</td><td>Agent alias ID for InvokeAgent.</td></tr>
+<tr><td><code>USE_AGENTCORE</code></td><td>(not set)</td><td>If true, graph may call AgentCore (needs real IDs).</td></tr>
+<tr><td><code>LANGCHAIN_TRACING_V2</code></td><td>false</td><td>Send LangGraph/LangChain spans to LangSmith when true.</td></tr>
+<tr><td><code>DEMO_MODE</code></td><td>true</td><td>Demo shortcuts (e.g. in-memory audit vs DynamoDB).</td></tr>
+</tbody></table>
+<h2>Troubleshooting cheat sheet</h2>
+<h4>Invalid Bedrock Guardrail ID</h4>
+<p class="symptom">ValidationException mentioning guardrail identifier is invalid on Converse. Remove BEDROCK_GUARDRAIL_ID from .env for local runs, or set a real ID from your account.</p>
+<h4>Guardrail input format error</h4>
+<p class="symptom">ApplyGuardrail incorrect format. Same as above — bad ID/version often causes this.</p>
+<h4>AgentCore / InvokeAgent validation</h4>
+<p class="symptom">Long message about agentId / agentAliasId pattern or length. Use real AgentCore IDs from the console, or turn off AgentCore so the graph skips that node.</p>
+<h4>LangSmith HTTP 403</h4>
+<p class="symptom">Error posting to api.smith.langchain.com. Disable tracing (LANGCHAIN_TRACING_V2=false) or supply a valid LANGCHAIN_API_KEY.</p>
+<h4>Very few workflow steps, outcome denied</h4>
+<p class="symptom">~3 audit events and immediate denied. Often PHI purpose mapping — ensure adjudicate maps to an allowed purpose in policy code.</p>
+<h2>Per claim</h2>
+<section class="card fail">
+<h3>Claim 1: <code>CLM-F0203EEB8155</code></h3>
+<p class="claim-ctx">Drug: Lantus SoloStar 100u/mL (brand, tier 3, $312.00) · Plan: Commercial PPO Gold</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 2: <code>CLM-65A5170C95C2</code></h3>
+<p class="claim-ctx">Drug: Lantus SoloStar 100u/mL (brand, tier 3, $312.00) · Plan: Commercial HMO Silver</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 3: <code>CLM-74A44560AB95</code></h3>
+<p class="claim-ctx">Drug: Lantus SoloStar 100u/mL (brand, tier 3, $312.00) · Plan: Self-Insured Employer Plan</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 4: <code>CLM-88E7A6653EA3</code></h3>
+<p class="claim-ctx">Drug: Atorvastatin 20mg (generic, tier 2, $18.75) · Plan: Commercial HMO Silver</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 5: <code>CLM-E72544B4495F</code></h3>
+<p class="claim-ctx">Drug: Lipitor 20mg (brand, tier 3, $145.00) · Plan: Commercial HMO Silver</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 6: <code>CLM-478D61A662C4</code></h3>
+<p class="claim-ctx">Drug: Lantus SoloStar 100u/mL (brand, tier 3, $312.00) · Plan: Commercial HMO Silver</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 7: <code>CLM-48675F3C74E7</code></h3>
+<p class="claim-ctx">Drug: Lantus SoloStar 100u/mL (brand, tier 3, $312.00) · Plan: Commercial PPO Gold</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 8: <code>CLM-E232DFBD8265</code></h3>
+<p class="claim-ctx">Drug: Atorvastatin 20mg (generic, tier 2, $18.75) · Plan: Medicare Part D PDP</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 9: <code>CLM-7EA27EE404F4</code></h3>
+<p class="claim-ctx">Drug: Amlodipine 5mg (generic, tier 1, $9.25) · Plan: Commercial PPO Gold</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<section class="card fail">
+<h3>Claim 10: <code>CLM-4FF822CE060E</code></h3>
+<p class="claim-ctx">Drug: Lipitor 20mg (brand, tier 3, $145.00) · Plan: Medicare Part D PDP</p>
+<p><strong>Result:</strong> <strong>Failed</strong> — AgentCore IDs are placeholders</p>
+<p>AWS expects short alphanumeric agent and alias IDs. Replace `AGENTCORE_AGENT_ID` and `AGENTCORE_AGENT_ALIAS_ID` with real values, or disable AgentCore in config so the demo does not call InvokeAgent.</p>
+<p><strong>Raw message</strong> (for support / search):</p>
+<pre class="raw">An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expression pattern: [0-9a-zA-Z]+; Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or equal to 10</pre>
+<p><strong>Broken down:</strong></p><ul class="bullets">
+<li>An error occurred (ValidationException) when calling the InvokeAgent operation: 4 validation errors detected: Value &#x27;…</li>
+<li>Value &#x27;your-agentcore-agent-id&#x27; at &#x27;agentId&#x27; failed to satisfy constraint: Member must have length less than or equal…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must satisfy regular expressio…</li>
+<li>Value &#x27;your-agentcore-alias-id&#x27; at &#x27;agentAliasId&#x27; failed to satisfy constraint: Member must have length less than or …</li>
+</ul>
+</section>
+<h2>Audit trail (this run)</h2>
+<p>The in-memory audit logger recorded <strong>30</strong> event(s). The <em>Meaning</em> column is plain English.</p>
+<table class="data">
+<thead><tr><th>Time (UTC)</th><th>Event</th><th>Meaning</th><th>Claim</th><th>Result</th></tr></thead><tbody>
+<tr><td>2026-03-24 15:06:06</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-F0203EEB8155</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:06</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-F0203EEB8155</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:06</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-F0203EEB8155</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:06</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-65A5170C95C2</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:06</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-65A5170C95C2</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:06</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-65A5170C95C2</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-74A44560AB95</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-74A44560AB95</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-74A44560AB95</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-88E7A6653EA3</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-88E7A6653EA3</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-88E7A6653EA3</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-E72544B4495F</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-E72544B4495F</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-E72544B4495F</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-478D61A662C4</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-478D61A662C4</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-478D61A662C4</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-48675F3C74E7</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-48675F3C74E7</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-48675F3C74E7</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-E232DFBD8265</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-E232DFBD8265</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-E232DFBD8265</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-7EA27EE404F4</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-7EA27EE404F4</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-7EA27EE404F4</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>PII_SCRUB</code></td><td>Member identifiers masked for safe processing.</td><td><code>CLM-4FF822CE060E</code></td><td>SUCCESS</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>GOVERNANCE_CHECK</code></td><td>Policy allowed this action for this actor.</td><td><code>CLM-4FF822CE060E</code></td><td>ALLOW</td></tr>
+<tr><td>2026-03-24 15:06:07</td><td><code>ADJUDICATION_STARTED</code></td><td>Workflow began adjudication for this claim.</td><td><code>CLM-4FF822CE060E</code></td><td>SUCCESS</td></tr>
+</tbody></table>
+<footer class="files">
+<strong>demo_output.json</strong> — full JSON for this run:<br>
+<code style="word-break:break-all;">/Users/seyedeh.mirrahimi/Desktop/calclaim-demo/demo_output.json</code>
+<p>End of report.</p></footer>
+</div></body></html>

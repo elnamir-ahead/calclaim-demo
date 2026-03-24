@@ -1,0 +1,12 @@
+# Optional dependencies — require Python >=3.10
+# Provides NLP-based PII/PHI entity recognition via Microsoft Presidio.
+# When not installed, pii_scrubber.py automatically falls back to regex-only mode.
+#
+# Usage:
+#   pip install -r requirements-optional.txt
+#
+presidio-analyzer>=2.2.0
+presidio-anonymizer>=2.2.0
+
+# AWS X-Ray — patch boto3/httplib when AWS_XRAY_TRACING_ENABLED=true on Lambda
+aws-xray-sdk>=2.14.0

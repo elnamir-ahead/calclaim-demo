@@ -1,0 +1,86 @@
+# CI/CD aligned with policy-agent: build Lambda zip + Terraform + S3 remote state.
+# https://github.com/elnamir-ahead/policy-agent
+
+name: Build and Deploy to AWS (Terraform)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+          terraform_wrapper: false
+
+      - name: Check AWS secrets
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "::error::Missing AWS credentials. Add repository secrets:"
+            echo "  - AWS_ACCESS_KEY_ID"
+            echo "  - AWS_SECRET_ACCESS_KEY"
+            echo "See .github/DEPLOY_SETUP.md"
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build Lambda package
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/build_lambda.sh
+
+      - name: Setup Terraform state bucket
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          BUCKET="calclaim-tfstate-${ACCOUNT_ID}"
+          aws s3 mb "s3://${BUCKET}" --region ${{ env.AWS_REGION }} 2>/dev/null || true
+          echo "TFSTATE_BUCKET=${BUCKET}" >> "$GITHUB_ENV"
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init -upgrade \
+            -backend-config="bucket=${{ env.TFSTATE_BUCKET }}" \
+            -backend-config="key=calclaim-demo/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Terraform Apply
+        working-directory: terraform
+        env:
+          TF_VAR_langchain_api_key: ${{ secrets.LANGCHAIN_API_KEY }}
+        run: terraform apply -auto-approve
+
+      - name: Deployment summary
+        working-directory: terraform
+        run: |
+          echo "## Terraform deploy complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**API base URL:** $(terraform output -raw api_base_url)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Try: \`GET .../health\` and OpenAPI at \`/docs\`." >> "$GITHUB_STEP_SUMMARY"

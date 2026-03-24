@@ -1,0 +1,16 @@
+.env
+.venv
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cdk.staging/
+cdk.out/
+node_modules/
+
+# Terraform
+terraform/build/
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl

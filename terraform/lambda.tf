@@ -1,0 +1,42 @@
+resource "aws_lambda_function" "api" {
+  filename         = "${path.module}/build/lambda.zip"
+  function_name    = "calclaim-api"
+  role             = aws_iam_role.lambda.arn
+  handler          = "lambda.handler.handler"
+  source_code_hash = filebase64sha256("${path.module}/build/lambda.zip")
+  runtime          = "python3.12"
+  timeout          = var.lambda_timeout_seconds
+  memory_size      = var.lambda_memory_mb
+
+  environment {
+    variables = merge(
+      {
+        AWS_REGION                 = var.aws_region
+        BEDROCK_REGION             = var.aws_region
+        ENVIRONMENT                = "prod"
+        DEMO_MODE                  = "false"
+        LOG_LEVEL                  = "INFO"
+        LOG_FORMAT                 = var.log_format
+        TRUST_API_GATEWAY_AUTH     = var.enable_jwt_authorizer ? "true" : "false"
+        REQUIRE_AUTH               = "false"
+        DYNAMODB_CLAIMS_TABLE      = aws_dynamodb_table.claims.name
+        DYNAMODB_AUDIT_TABLE       = aws_dynamodb_table.audit.name
+        DYNAMODB_SESSION_TABLE     = aws_dynamodb_table.sessions.name
+        HITL_SNS_TOPIC_ARN         = aws_sns_topic.hitl.arn
+        LANGCHAIN_PROJECT          = var.project_name
+        LANGCHAIN_ENDPOINT         = "https://api.smith.langchain.com"
+        LANGCHAIN_TRACING_V2       = var.langchain_tracing_v2
+        BEDROCK_GUARDRAIL_ID       = var.bedrock_guardrail_id
+        BEDROCK_GUARDRAIL_VERSION  = "DRAFT"
+        USE_OPA                    = var.use_opa ? "true" : "false"
+        OPA_SERVER_URL             = var.opa_server_url
+        CORS_ALLOW_ORIGINS         = length(var.cors_allow_origins) == 1 && var.cors_allow_origins[0] == "*" ? "*" : join(",", var.cors_allow_origins)
+      },
+      var.langchain_api_key != "" ? { LANGCHAIN_API_KEY = var.langchain_api_key } : {}
+    )
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic,
+  ]
+}
