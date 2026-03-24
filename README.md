@@ -16,31 +16,33 @@ Pharmacy benefit claim adjudication demo built on the **Navitus Inference Optimi
 Request
   │
   ▼
-┌─────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────┐
 │  Governance Pre-flight                                               │
-│  ├── PII Scrub (Presidio + regex)   → masks PHI before any LLM      │
-│  └── HIPAA PHI Access Policy        → purpose + role check          │
-└─────────────────────────────────────────────────────────────────────┘
+│                                                                      │
+│    • PII Scrub (Presidio + regex) → masks PHI before any LLM         │
+│    • HIPAA PHI Access Policy → purpose + role check                  │
+└──────────────────────────────────────────────────────────────────────┘
   │
   ▼
-┌─────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────┐
 │  LangGraph Multi-Agent Workflow (A2A Protocol)                       │
 │                                                                      │
 │  Supervisor Agent (Claude Haiku)                                     │
-│  ├── Intent classification + routing                                  │
-│  ├─► AgentCore (CalcClaim) → MCP tools (optional HTTP) → Claims Agent (Sonnet)   │
-│  ├─► Formulary Agent (Claude Haiku) — tier / PA lookup               │
-│  └─► Compliance Agent (Claude Sonnet) — HIPAA audit                 │
-└─────────────────────────────────────────────────────────────────────┘
+│    • Intent classification + routing                                 │
+│    • AgentCore (CalcClaim) → MCP (optional) → Claims Agent (Sonnet)  │
+│    • Formulary Agent (Haiku) — tier / PA lookup                      │
+│    • Compliance Agent (Sonnet) — HIPAA audit                         │
+└──────────────────────────────────────────────────────────────────────┘
   │
   ▼
-┌─────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────┐
 │  Quality & Governance Gate                                           │
-│  ├── OPA Policy Engine  (T1–T4 data tiers, bulk guard, RBAC)        │
-│  ├── HITL Gate          (PHI, high-value, tier-5, destructive)       │
-│  ├── Bedrock Guardrails (PII anonymization on LLM output)           │
-│  └── Immutable Audit    (DynamoDB + S3 WORM + CloudWatch)           │
-└─────────────────────────────────────────────────────────────────────┘
+│                                                                      │
+│    • OPA Policy Engine (T1–T4 tiers, bulk guard, RBAC)               │
+│    • HITL Gate (PHI, high-value, tier-5, destructive)                │
+│    • Bedrock Guardrails (PII anonymization on LLM output)            │
+│    • Immutable Audit (DynamoDB + S3 WORM + CloudWatch)               │
+└──────────────────────────────────────────────────────────────────────┘
   │
   ▼
 Response + Audit Trail
