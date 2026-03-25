@@ -33,8 +33,10 @@ jobs:
       - name: Bandit (Python SAST on src/)
         run: bandit -r src -ll
 
+      # Pygments is transitive (e.g. rich). CVE-2026-4539: ReDoS in AdlLexer, low severity,
+      # local-only exploit path; no fixed Pygments release in PyPI yet — ignore until >=2.19.3 (or equivalent).
       - name: pip-audit (dependency CVEs)
-        run: pip-audit -r requirements.txt --desc on
+        run: pip-audit -r requirements.txt --desc on --ignore-vuln CVE-2026-4539
         continue-on-error: true
 
   build-and-deploy:
