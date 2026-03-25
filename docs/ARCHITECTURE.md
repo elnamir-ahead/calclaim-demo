@@ -215,5 +215,5 @@ Re-export **`calclaim-architecture-aws-native.png`** from the SVG in Figma, Inks
 | **CORS** | `CORS_ALLOW_ORIGINS` for FastAPI; Terraform `cors_allow_origins` for API Gateway. | `lambda/handler.py`, `terraform/api_gateway.tf` |
 | **Governance** | **OPA** HTTP when `USE_OPA=true` and `OPA_SERVER_URL` set — loads **`policies/calclaim.rego`** (claim_access, bulk, phi, formulary). | `src/governance/policy_engine.py`, `policies/calclaim.rego` |
 | **Observability** | **`LOG_FORMAT=json`** adds `correlation_id` to log lines; **`X-Correlation-ID`** / **`X-Request-ID`** middleware; optional **X-Ray** via `aws-xray-sdk` + `AWS_XRAY_TRACING_ENABLED` / `XRAY_PATCH_SDK`. | `src/utils/enterprise_logging.py`, `src/utils/http_middleware.py`, `requirements-optional.txt` |
-| **SDLC** | **Bandit** + **pip-audit** workflow; **Dependabot** for pip + GitHub Actions. | `.github/workflows/security.yml`, `.github/dependabot.yml` |
+| **SDLC** | **Bandit** + **pip-audit** in CI; **Dependabot** for pip + GitHub Actions. | `.github/workflows/deploy-aws.yml` (security job), `.github/dependabot.yml` |
 | **MCP** | **`MCP_ALLOWED_HOSTS`**, **`MCP_ALLOWED_SCHEMES`**, optional **`MCP_BEARER_TOKEN`** (when supported by installed `mcp` SDK). | `src/utils/mcp_workflow_client.py` |

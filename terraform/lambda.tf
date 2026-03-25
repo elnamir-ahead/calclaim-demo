@@ -21,7 +21,7 @@ resource "aws_lambda_function" "api" {
   environment {
     variables = merge(
       {
-        AWS_REGION                 = var.aws_region
+        # AWS_REGION is reserved — Lambda sets it automatically; do not pass it here.
         BEDROCK_REGION             = var.aws_region
         ENVIRONMENT                = "prod"
         DEMO_MODE                  = "false"

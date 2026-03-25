@@ -109,7 +109,7 @@ class CalcClaimAPIStack(Stack):
             memory_size=1024,
             tracing=lambda_.Tracing.ACTIVE,
             environment={
-                "AWS_REGION": self.region,
+                # AWS_REGION is reserved on Lambda; runtime provides it.
                 "BEDROCK_REGION": self.region,
                 "ENVIRONMENT": "demo",
                 "DEMO_MODE": "false",

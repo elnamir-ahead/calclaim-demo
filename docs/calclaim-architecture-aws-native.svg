@@ -123,7 +123,7 @@
   <rect x="96" y="828" width="966" height="92" rx="10" fill="#faf5ff" stroke="#9333ea" stroke-width="1.2"/>
   <text x="120" y="852" font-size="12" font-weight="700" fill="#6b21a8">Enterprise controls (implemented)</text>
   <text x="120" y="870" font-size="9" fill="#7c3aed">JWT: REQUIRE_AUTH + JWT_JWKS_URL | API GW JWT + TRUST_API_GATEWAY_AUTH | CORS_ALLOW_ORIGINS</text>
-  <text x="120" y="886" font-size="9" fill="#7c3aed">OPA: USE_OPA + OPA_SERVER_URL + policies/calclaim.rego | CI: Bandit + pip-audit (security.yml) | Dependabot</text>
+  <text x="120" y="886" font-size="9" fill="#7c3aed">OPA: USE_OPA + OPA_SERVER_URL + policies/calclaim.rego | CI: Bandit + pip-audit (deploy-aws.yml) | Dependabot</text>
   <text x="120" y="902" font-size="9" fill="#7c3aed">MCP allowlist | JSON logs + correlation_id | optional CloudWatch EMF metrics</text>
 
   <!-- Right column: LangSmith -->
@@ -147,7 +147,7 @@
   <text x="1331" y="396" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">Infrastructure as code</text>
   <text x="1331" y="416" text-anchor="middle" font-size="9" fill="#475569">terraform/: Lambda zip, API GW, DDB, SNS</text>
   <text x="1331" y="432" text-anchor="middle" font-size="9" fill="#475569">infrastructure/cdk/: full stacks + optional JWT</text>
-  <text x="1331" y="448" text-anchor="middle" font-size="9" fill="#475569">.github/workflows: deploy-aws.yml, security.yml</text>
+  <text x="1331" y="448" text-anchor="middle" font-size="9" fill="#475569">.github/workflows: deploy-aws.yml (scan + deploy)</text>
 
   <!-- Legend -->
   <rect x="1110" y="486" width="442" height="200" rx="10" fill="#ffffff" stroke="#cbd5e1"/>

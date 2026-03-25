@@ -55,7 +55,7 @@ Response + Audit Trail
 
 ### Enterprise features (optional)
 
-JWT at the edge (**Terraform** `enable_jwt_authorizer` / **CDK** `-c jwtIssuer=… -c jwtAudience=…`) or in **FastAPI** (`REQUIRE_AUTH` + `JWT_JWKS_URL`). Structured logs: `LOG_FORMAT=json` and `X-Correlation-ID`. **OPA**: `USE_OPA=true` + `OPA_SERVER_URL` with `policies/calclaim.rego`. **MCP**: `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_SCHEMES`. CI: `.github/workflows/security.yml` (Bandit + pip-audit), Dependabot. Details: **`docs/ARCHITECTURE.md` §11** (and **§2** for LLM Gateway / Evaluation / Governance pillars).
+JWT at the edge (**Terraform** `enable_jwt_authorizer` / **CDK** `-c jwtIssuer=… -c jwtAudience=…`) or in **FastAPI** (`REQUIRE_AUTH` + `JWT_JWKS_URL`). Structured logs: `LOG_FORMAT=json` and `X-Correlation-ID`. **OPA**: `USE_OPA=true` + `OPA_SERVER_URL` with `policies/calclaim.rego`. **MCP**: `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_SCHEMES`. CI: `.github/workflows/deploy-aws.yml` (Bandit + pip-audit on every run; AWS deploy on push to `main` only), Dependabot. Details: **`docs/ARCHITECTURE.md` §11** (and **§2** for LLM Gateway / Evaluation / Governance pillars).
 
 ### AWS Services Used
 
@@ -123,7 +123,7 @@ calclaim-demo/
 │   ├── build_lambda.sh           # Zip Lambda for Terraform / local apply
 │   └── deploy_terraform.sh       # build + terraform init/apply
 ├── .github/
-│   ├── workflows/deploy-aws.yml  # CI: build + Terraform apply
+│   ├── workflows/deploy-aws.yml  # CI: security scan + Terraform apply (main)
 │   └── DEPLOY_SETUP.md           # GitHub secrets & IAM notes
 ├── tests/
 │   └── test_calclaim.py          # Unit + integration tests
@@ -206,7 +206,7 @@ You can deploy with **CDK** (full stacks: S3 WORM, Bedrock agent, observability)
 ### Option A — Terraform + GitHub Actions (policy-agent style)
 
 - **Terraform:** `terraform/` — Lambda (`calclaim-api`), API Gateway HTTP API (`ANY /{proxy+}`), DynamoDB (`calclaim-claims`, `calclaim-audit-log`, `calclaim-sessions`), SNS HITL topic, IAM.
-- **CI:** `.github/workflows/deploy-aws.yml` — on push to `main`, builds `terraform/build/lambda.zip` and runs `terraform apply`.
+- **CI:** `.github/workflows/deploy-aws.yml` — **security** job (Bandit + pip-audit) on PR and push; **deploy** job builds `terraform/build/lambda.zip` and runs `terraform apply` on push to `main` / manual run only (not on PRs).
 - **Secrets:** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`; optional `LANGCHAIN_API_KEY`.
 - **Setup:** see [`.github/DEPLOY_SETUP.md`](.github/DEPLOY_SETUP.md).
 
