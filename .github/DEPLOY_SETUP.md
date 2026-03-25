@@ -40,7 +40,9 @@ chmod +x scripts/build_lambda.sh scripts/deploy_terraform.sh
 
 ## Lambda package size
 
-`pip install -r requirements.txt` into the zip can exceed AWS Lambda deployment limits. If `apply` fails on size, split dependencies into **Lambda layers** or trim optional packages (see `requirements-optional.txt`).
+CI builds the zip with **`requirements-lambda.txt`** (not full `requirements.txt`) so **CDK, pandas, OpenTelemetry**, etc. are excluded and the package stays under API Gateway/Lambda direct-upload limits (~70MB).
+
+If `apply` still fails with `RequestEntityTooLargeException`, use **S3** for the deployment package or add **Lambda layers** for heavy wheels.
 
 ## OpenAPI
 

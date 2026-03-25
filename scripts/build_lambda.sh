@@ -10,8 +10,9 @@ PACKAGE_DIR="$OUTPUT_DIR/package"
 rm -rf "$PACKAGE_DIR" "$OUTPUT_DIR/lambda.zip"
 mkdir -p "$PACKAGE_DIR"
 
-echo "==> pip install requirements → package (this may take a few minutes)..."
-python3 -m pip install -q -r "$PROJECT_ROOT/requirements.txt" -t "$PACKAGE_DIR" --upgrade
+REQ_FILE="$PROJECT_ROOT/requirements-lambda.txt"
+echo "==> pip install $REQ_FILE → package (slim Lambda set; avoids CDK / pandas / OTEL bloat)..."
+python3 -m pip install -q -r "$REQ_FILE" -t "$PACKAGE_DIR" --upgrade
 
 echo "==> Copy application code..."
 cp -R "$PROJECT_ROOT/src" "$PACKAGE_DIR/"

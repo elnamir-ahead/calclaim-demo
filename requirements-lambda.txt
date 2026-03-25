@@ -1,0 +1,16 @@
+# Runtime dependencies for Lambda zip only (Terraform / GitHub Actions).
+# Keep this small: API Gateway has a ~70MB limit for direct CreateFunction uploads.
+# Full project (CDK, pandas, CLI tools): use requirements.txt locally.
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-aws>=0.2.0
+langsmith>=0.1.0
+boto3>=1.35.0
+botocore>=1.35.0
+pydantic>=2.7.0
+faker>=26.0.0
+PyJWT[crypto]>=2.8.0
+fastapi>=0.115.0
+mangum>=0.19.0
+httpx>=0.27.0
+mcp>=1.2.0,<2; python_version >= "3.10"
