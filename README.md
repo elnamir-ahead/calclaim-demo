@@ -6,6 +6,8 @@ Pharmacy benefit claim adjudication demo built on the **Navitus Inference Optimi
 
 **Detailed write-up:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (request path, REST vs MCP, LangGraph order, AWS mapping, observability, optional Textract). **Request-path diagram:** [docs/calclaim-request-flow.drawio](docs/calclaim-request-flow.drawio) (diagrams.net); Mermaid: [docs/calclaim-request-flow.md](docs/calclaim-request-flow.md).
 
+**Live demo of the five pillars (LLM Gateway, Evaluation, Governance, MCP, Observability):** [docs/DEMO_PILLARS.md](docs/DEMO_PILLARS.md) — call **`GET /demo/pillars`** and **`POST /demo/governance/policy-probe`** on the deployed API (also listed under the **demo-pillars** tag in **`/docs`**).
+
 ![CalcClaim LangGraph flow — governance pre-flight, multi-agent Bedrock layer, policy / HITL / guardrails / audit, response](docs/calclaim-architecture-flow.png)
 
 ![CalcClaim AWS-native view — API Gateway, Lambda, LangGraph, Bedrock, MCP sidecar, LangSmith, observability, optional S3+Textract](docs/calclaim-architecture-aws-native.svg)
@@ -85,6 +87,7 @@ calclaim-demo/
 │   └── calclaim.rego                        # OPA policies (USE_OPA + OPA_SERVER_URL)
 ├── docs/
 │   ├── ARCHITECTURE.md                      # Detailed architecture (read this first)
+│   ├── DEMO_PILLARS.md                      # Five pillars — API demo endpoints
 │   ├── calclaim-architecture-flow.png       # LangGraph flow (image)
 │   ├── calclaim-architecture-aws-native.png # AWS view (raster; may lag SVG)
 │   └── calclaim-architecture-aws-native.svg # AWS + MCP + observability + optional Textract

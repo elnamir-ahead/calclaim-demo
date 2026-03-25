@@ -127,6 +127,10 @@ Enterprise agentic systems separate **how models are accessed**, **how quality i
 
 Full numbered list also appears in **`REPORT.md`** §4.
 
+### 5a. Demo API — five pillars (live status)
+
+For stakeholder demos, the service exposes **`GET /demo/pillars`**, **`GET /demo/pillars/{pillar}`**, and **`POST /demo/governance/policy-probe`**. See **`docs/DEMO_PILLARS.md`**, **`src/utils/pillar_status.py`**, routes in **`lambda/handler.py`** (OpenAPI tag **demo-pillars**).
+
 ---
 
 ## 6. AWS services (what maps to what)

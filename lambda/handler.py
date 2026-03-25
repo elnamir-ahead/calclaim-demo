@@ -41,7 +41,8 @@ from src.utils.langsmith_config import configure_tracing
 configure_tracing()
 
 from src.graph.claims_workflow import compile_claims_graph
-from src.governance import get_audit_logger, get_hitl_gate
+from src.governance import get_audit_logger, get_hitl_gate, get_policy_engine
+from src.utils.pillar_status import build_pillar_demo_report
 from src.data.fake_data import generate_demo_dataset
 from src.utils.request_context import get_correlation_id
 from src.utils.http_middleware import BearerAuthMiddleware, CorrelationIdMiddleware
@@ -75,6 +76,12 @@ app = FastAPI(
     description="Pharmacy benefit claim adjudication powered by Amazon Bedrock + LangGraph",
     version="2.0.0",
     lifespan=lifespan,
+    openapi_tags=[
+        {
+            "name": "demo-pillars",
+            "description": "Five enterprise pillars (LLM Gateway, Evaluation, Governance, MCP, Observability) — status and probes for live demos.",
+        },
+    ],
 )
 
 # Order: last added = outermost on request. CORS outermost, then correlation, then JWT.
@@ -145,6 +152,63 @@ def health():
         "service": "calclaim-demo",
         "version": "2.0.0",
         "auth_mode": describe_auth_mode(),
+        "demo": {
+            "pillars_report": "/demo/pillars",
+            "policy_probe": "POST /demo/governance/policy-probe",
+        },
+    }
+
+
+_PILLAR_KEYS = frozenset({"llm_gateway", "evaluation", "governance", "mcp", "observability"})
+
+
+@app.get("/demo/pillars", tags=["demo-pillars"])
+def demo_pillars():
+    """Full JSON status for all five enterprise pillars (no secrets)."""
+    return build_pillar_demo_report()
+
+
+@app.get("/demo/pillars/{pillar_key}", tags=["demo-pillars"])
+def demo_pillar_one(pillar_key: str):
+    """Single pillar slice for focused slides (llm_gateway, evaluation, governance, mcp, observability)."""
+    report = build_pillar_demo_report()
+    key = pillar_key.lower().replace("-", "_")
+    if key not in _PILLAR_KEYS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown pillar {pillar_key!r}; use one of: {sorted(_PILLAR_KEYS)}",
+        )
+    return report["pillars"][key]
+
+
+class PolicyProbeRequest(BaseModel):
+    """Minimal RBAC/policy demo without running Bedrock."""
+
+    actor_role: str = "claims_processor"
+    action: str = "adjudicate"
+
+
+@app.post("/demo/governance/policy-probe", tags=["demo-pillars"])
+def demo_policy_probe(req: PolicyProbeRequest):
+    """
+    Evaluate inline/OPA claim_access rules on a synthetic claim (instant — no LLM).
+    Example: viewer + adjudicate → DENY (POL-RBAC-001).
+    """
+    pe = get_policy_engine()
+    minimal_claim: dict[str, Any] = {
+        "drug": {"tier": 1},
+        "member": {"plan": {"plan_id": "PLN-DEMO"}},
+        "pricing": {"plan_pay": 50.0},
+    }
+    r = pe.evaluate_claim_access(req.actor_role, minimal_claim, req.action)
+    return {
+        "pillar": "governance",
+        "decision": r.decision,
+        "policy_id": r.policy_id,
+        "reason": r.reason,
+        "allowed": r.allowed,
+        "requires_human": r.requires_human,
+        "metadata": r.metadata,
     }
 
 

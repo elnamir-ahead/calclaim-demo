@@ -97,3 +97,33 @@ variable "lambda_log_retention_days" {
   type        = number
   default     = 30
 }
+
+variable "use_agentcore" {
+  description = "Enable AgentCore invoke_agent path when agent id/alias valid"
+  type        = string
+  default     = "true"
+}
+
+variable "agentcore_agent_id" {
+  description = "Bedrock Agent id (1–10 alphanumeric) — empty uses mock"
+  type        = string
+  default     = ""
+}
+
+variable "agentcore_agent_alias_id" {
+  description = "Bedrock Agent alias id"
+  type        = string
+  default     = "TSTALIASID"
+}
+
+variable "calclaim_mcp_url" {
+  description = "Optional MCP streamable HTTP URL for mcp_tools node (e.g. internal ALB)"
+  type        = string
+  default     = ""
+}
+
+variable "use_mcp_tools" {
+  description = "Set true when CALCLAIM_MCP_URL is reachable from Lambda"
+  type        = string
+  default     = "false"
+}

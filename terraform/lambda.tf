@@ -42,6 +42,11 @@ resource "aws_lambda_function" "api" {
         OPA_SERVER_URL             = var.opa_server_url
         CORS_ALLOW_ORIGINS         = length(var.cors_allow_origins) == 1 && var.cors_allow_origins[0] == "*" ? "*" : join(",", var.cors_allow_origins)
         ENABLE_CLOUDWATCH_EMF      = "true"
+        USE_AGENTCORE              = var.use_agentcore
+        AGENTCORE_AGENT_ID         = var.agentcore_agent_id
+        AGENTCORE_AGENT_ALIAS_ID   = var.agentcore_agent_alias_id
+        CALCLAIM_MCP_URL           = var.calclaim_mcp_url
+        USE_MCP_TOOLS              = var.use_mcp_tools
       },
       var.langchain_api_key != "" ? { LANGCHAIN_API_KEY = var.langchain_api_key } : {}
     )

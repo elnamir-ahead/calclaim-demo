@@ -228,3 +228,34 @@ class TestHITLGate:
         assert resolved is not None
         assert resolved.resolution == "APPROVED"
         assert resolved.resolved_by == "test-reviewer"
+
+
+# ---------------------------------------------------------------------------
+# Five pillars — demo API helpers
+# ---------------------------------------------------------------------------
+
+
+class TestPillarStatus:
+    def test_build_pillar_report_has_five_pillars(self):
+        from src.utils.pillar_status import build_pillar_demo_report
+
+        r = build_pillar_demo_report()
+        assert r["schema_version"] == "1.0"
+        assert set(r["pillars"].keys()) == {
+            "llm_gateway",
+            "evaluation",
+            "governance",
+            "mcp",
+            "observability",
+        }
+
+    def test_policy_viewer_adjudicate_denied(self):
+        eng = InlinePolicyEngine()
+        claim = {
+            "drug": {"tier": 1},
+            "member": {"plan": {"plan_id": "PLN-DEMO"}},
+            "pricing": {"plan_pay": 50.0},
+        }
+        res = eng.evaluate_claim_access("viewer", claim, "adjudicate")
+        assert res.decision == "DENY"
+        assert "POL-RBAC" in res.policy_id
