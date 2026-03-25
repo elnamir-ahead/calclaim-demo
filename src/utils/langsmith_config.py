@@ -158,6 +158,56 @@ def evaluate_adjudication_accuracy(
     )
 
 
+# Expected keys on final API / adjudication payloads (contract test for eval pipelines).
+_ADJUDICATION_SCHEMA_KEYS = frozenset(
+    {
+        "status",
+        "reject_code",
+        "reject_reason",
+        "copay",
+        "plan_pay",
+        "dur_alerts",
+        "reasoning",
+        "confidence",
+    }
+)
+
+
+def evaluate_adjudication_schema(payload: dict[str, Any]) -> EvaluationResult:
+    """
+    Structural compliance for LLM JSON — reduces silent field drift in production.
+
+    Use in LangSmith **Dataset runs** or CI: pair with online evaluators in the
+    LangSmith UI (LLM-as-judge, rubric) for full "market standard" coverage.
+    """
+    missing = sorted(_ADJUDICATION_SCHEMA_KEYS - set(payload.keys()))
+    score = 1.0 if not missing else max(0.0, 1.0 - 0.15 * len(missing))
+    return EvaluationResult(
+        key="adjudication_schema",
+        score=score,
+        comment="All expected keys present" if not missing else f"Missing keys: {missing}",
+    )
+
+
+def evaluate_financial_sanity(payload: dict[str, Any]) -> EvaluationResult:
+    """Non-negative copay / plan_pay where present (deterministic guardrail)."""
+    try:
+        copay = float(payload.get("copay", 0))
+        plan_pay = float(payload.get("plan_pay", 0))
+    except (TypeError, ValueError):
+        return EvaluationResult(
+            key="financial_sanity",
+            score=0.0,
+            comment="copay/plan_pay not numeric",
+        )
+    ok = copay >= 0 and plan_pay >= 0
+    return EvaluationResult(
+        key="financial_sanity",
+        score=1.0 if ok else 0.0,
+        comment="OK" if ok else "Negative monetary fields",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Convenience decorator — wraps any function in a named LangSmith trace
 # ---------------------------------------------------------------------------

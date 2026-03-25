@@ -85,3 +85,15 @@ variable "use_opa" {
   type        = bool
   default     = false
 }
+
+variable "enable_xray_tracing" {
+  description = "AWS X-Ray active tracing on Lambda (service map + latency in CloudWatch)"
+  type        = bool
+  default     = true
+}
+
+variable "lambda_log_retention_days" {
+  description = "CloudWatch Logs retention for /aws/lambda/calclaim-api"
+  type        = number
+  default     = 30
+}

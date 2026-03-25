@@ -48,7 +48,10 @@ class CalcClaimAPIStack(Stack):
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name(
                     "service-role/AWSLambdaBasicExecutionRole"
-                )
+                ),
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AWSXRayDaemonWriteAccess"
+                ),
             ],
         )
 
@@ -104,6 +107,7 @@ class CalcClaimAPIStack(Stack):
             role=lambda_role,
             timeout=Duration.seconds(120),
             memory_size=1024,
+            tracing=lambda_.Tracing.ACTIVE,
             environment={
                 "AWS_REGION": self.region,
                 "BEDROCK_REGION": self.region,
@@ -119,6 +123,7 @@ class CalcClaimAPIStack(Stack):
                 "HITL_SNS_TOPIC_ARN": hitl_topic.topic_arn,
                 "LANGCHAIN_TRACING_V2": "true",
                 "LANGCHAIN_PROJECT": "calclaim-demo",
+                "ENABLE_CLOUDWATCH_EMF": "true",
             },
         )
 

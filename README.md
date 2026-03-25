@@ -4,7 +4,7 @@ Pharmacy benefit claim adjudication demo built on the **Navitus Inference Optimi
 
 ## Architecture
 
-**Detailed write-up:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (request path, REST vs MCP, LangGraph order, AWS mapping, observability, optional Textract).
+**Detailed write-up:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (request path, REST vs MCP, LangGraph order, AWS mapping, observability, optional Textract). **Request-path diagram:** [docs/calclaim-request-flow.drawio](docs/calclaim-request-flow.drawio) (diagrams.net); Mermaid: [docs/calclaim-request-flow.md](docs/calclaim-request-flow.md).
 
 ![CalcClaim LangGraph flow — governance pre-flight, multi-agent Bedrock layer, policy / HITL / guardrails / audit, response](docs/calclaim-architecture-flow.png)
 
@@ -55,7 +55,7 @@ Response + Audit Trail
 
 ### Enterprise features (optional)
 
-JWT at the edge (**Terraform** `enable_jwt_authorizer` / **CDK** `-c jwtIssuer=… -c jwtAudience=…`) or in **FastAPI** (`REQUIRE_AUTH` + `JWT_JWKS_URL`). Structured logs: `LOG_FORMAT=json` and `X-Correlation-ID`. **OPA**: `USE_OPA=true` + `OPA_SERVER_URL` with `policies/calclaim.rego`. **MCP**: `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_SCHEMES`. CI: `.github/workflows/security.yml` (Bandit + pip-audit), Dependabot. Details: **`docs/ARCHITECTURE.md` §10**.
+JWT at the edge (**Terraform** `enable_jwt_authorizer` / **CDK** `-c jwtIssuer=… -c jwtAudience=…`) or in **FastAPI** (`REQUIRE_AUTH` + `JWT_JWKS_URL`). Structured logs: `LOG_FORMAT=json` and `X-Correlation-ID`. **OPA**: `USE_OPA=true` + `OPA_SERVER_URL` with `policies/calclaim.rego`. **MCP**: `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_SCHEMES`. CI: `.github/workflows/security.yml` (Bandit + pip-audit), Dependabot. Details: **`docs/ARCHITECTURE.md` §11** (and **§2** for LLM Gateway / Evaluation / Governance pillars).
 
 ### AWS Services Used
 

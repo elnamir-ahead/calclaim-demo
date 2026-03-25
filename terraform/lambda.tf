@@ -1,3 +1,8 @@
+resource "aws_cloudwatch_log_group" "lambda_api" {
+  name              = "/aws/lambda/calclaim-api"
+  retention_in_days = var.lambda_log_retention_days
+}
+
 resource "aws_lambda_function" "api" {
   filename         = "${path.module}/build/lambda.zip"
   function_name    = "calclaim-api"
@@ -7,6 +12,10 @@ resource "aws_lambda_function" "api" {
   runtime          = "python3.12"
   timeout          = var.lambda_timeout_seconds
   memory_size      = var.lambda_memory_mb
+
+  tracing_config {
+    mode = var.enable_xray_tracing ? "Active" : "PassThrough"
+  }
 
   environment {
     variables = merge(
@@ -31,6 +40,7 @@ resource "aws_lambda_function" "api" {
         USE_OPA                    = var.use_opa ? "true" : "false"
         OPA_SERVER_URL             = var.opa_server_url
         CORS_ALLOW_ORIGINS         = length(var.cors_allow_origins) == 1 && var.cors_allow_origins[0] == "*" ? "*" : join(",", var.cors_allow_origins)
+        ENABLE_CLOUDWATCH_EMF      = "true"
       },
       var.langchain_api_key != "" ? { LANGCHAIN_API_KEY = var.langchain_api_key } : {}
     )
@@ -38,5 +48,6 @@ resource "aws_lambda_function" "api" {
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic,
+    aws_cloudwatch_log_group.lambda_api,
   ]
 }

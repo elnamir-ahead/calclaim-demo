@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1180" width="1600" height="1180" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1280" width="1600" height="1280" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
   <defs>
     <filter id="cardShadow" x="-2%" y="-2%" width="104%" height="108%">
       <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.08"/>
@@ -19,12 +19,12 @@
     </marker>
   </defs>
 
-  <rect width="1600" height="1180" fill="#f1f5f9"/>
+  <rect width="1600" height="1280" fill="#f1f5f9"/>
 
   <!-- Header -->
   <rect x="0" y="0" width="1600" height="88" fill="url(#headerGrad)"/>
   <text x="800" y="38" text-anchor="middle" font-size="26" font-weight="700" fill="#f8fafc">CalcClaim AWS Reference Architecture</text>
-  <text x="800" y="62" text-anchor="middle" font-size="13" fill="#94a3b8">API Gateway, Lambda, LangGraph, Bedrock, DynamoDB | MCP sidecar | LangSmith + CloudWatch | Enterprise controls</text>
+  <text x="800" y="62" text-anchor="middle" font-size="13" fill="#94a3b8">LLM Gateway (Bedrock + router) | Evaluation (LangSmith, EMF, Bedrock eval) | Governance (PII, OPA, HITL, audit) | See ARCHITECTURE.md section 2</text>
   <text x="800" y="78" text-anchor="middle" font-size="11" fill="#64748b">Navitus-style agentic adjudication demo | See docs/ARCHITECTURE.md</text>
 
   <!-- Swimlane backgrounds -->
@@ -124,7 +124,7 @@
   <text x="120" y="852" font-size="12" font-weight="700" fill="#6b21a8">Enterprise controls (implemented)</text>
   <text x="120" y="870" font-size="9" fill="#7c3aed">JWT: REQUIRE_AUTH + JWT_JWKS_URL | API GW JWT + TRUST_API_GATEWAY_AUTH | CORS_ALLOW_ORIGINS</text>
   <text x="120" y="886" font-size="9" fill="#7c3aed">OPA: USE_OPA + OPA_SERVER_URL + policies/calclaim.rego | CI: Bandit + pip-audit (security.yml) | Dependabot</text>
-  <text x="120" y="902" font-size="9" fill="#7c3aed">MCP allowlist | X-Ray optional (aws-xray-sdk) | JSON logs with correlation_id</text>
+  <text x="120" y="902" font-size="9" fill="#7c3aed">MCP allowlist | JSON logs + correlation_id | optional CloudWatch EMF metrics</text>
 
   <!-- Right column: LangSmith -->
   <rect x="1110" y="140" width="442" height="96" rx="10" fill="#fffbeb" stroke="#d97706" stroke-dasharray="6 4"/>
@@ -133,50 +133,60 @@
   <text x="1331" y="208" text-anchor="middle" font-size="9" fill="#a16207">LANGCHAIN_TRACING_V2 + API key | Complements CloudWatch (not a replacement)</text>
   <line x1="1110" y1="190" x2="1000" y2="360" stroke="#d97706" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrow-dim)"/>
 
-  <!-- Observability stack -->
+  <!-- Observability: Amazon CloudWatch; LangSmith box above for LLM traces -->
   <text x="1110" y="268" font-size="13" font-weight="700" fill="#1e293b">AWS observability</text>
-  <rect x="1110" y="278" width="442" height="46" rx="8" fill="#f8fafc" stroke="#64748b"/>
-  <text x="1331" y="298" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">Amazon CloudWatch</text>
-  <text x="1331" y="312" text-anchor="middle" font-size="8" fill="#64748b">Lambda logs / metrics / alarms</text>
-  <rect x="1110" y="332" width="442" height="46" rx="8" fill="#f8fafc" stroke="#64748b"/>
-  <text x="1331" y="352" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">AWS X-Ray</text>
-  <text x="1331" y="366" text-anchor="middle" font-size="8" fill="#64748b">Active tracing + optional SDK patch</text>
-  <rect x="1110" y="386" width="442" height="46" rx="8" fill="#f8fafc" stroke="#64748b"/>
-  <text x="1331" y="406" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">AWS CloudTrail</text>
-  <text x="1331" y="420" text-anchor="middle" font-size="8" fill="#64748b">API control-plane audit</text>
-  <rect x="1110" y="440" width="442" height="50" rx="8" fill="#f8fafc" stroke="#64748b"/>
-  <text x="1331" y="462" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">Amazon EventBridge</text>
-  <text x="1331" y="478" text-anchor="middle" font-size="8" fill="#64748b">Ops events to SIEM / automation</text>
-
-  <line x1="1110" y1="360" x2="620" y2="248" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3"/>
+  <rect x="1110" y="278" width="442" height="76" rx="8" fill="#f8fafc" stroke="#64748b"/>
+  <text x="1331" y="300" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">Amazon CloudWatch</text>
+  <text x="1331" y="320" text-anchor="middle" font-size="9" fill="#64748b">Lambda logs | metric filters / alarms | dashboards (observability_stack)</text>
+  <text x="1331" y="338" text-anchor="middle" font-size="9" fill="#64748b">EMF: ENABLE_CLOUDWATCH_EMF - CalcClaim/Workflow (no PHI in dimensions)</text>
+  <line x1="1110" y1="316" x2="620" y2="248" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3"/>
   <text x="850" y="280" font-size="8" fill="#64748b">telemetry</text>
 
   <!-- IaC note -->
-  <rect x="1110" y="510" width="442" height="100" rx="10" fill="#f1f5f9" stroke="#475569"/>
-  <text x="1331" y="538" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">Infrastructure as code</text>
-  <text x="1331" y="558" text-anchor="middle" font-size="9" fill="#475569">terraform/: Lambda zip, API GW, DDB, SNS</text>
-  <text x="1331" y="574" text-anchor="middle" font-size="9" fill="#475569">infrastructure/cdk/: full stacks + optional JWT</text>
-  <text x="1331" y="590" text-anchor="middle" font-size="9" fill="#475569">.github/workflows: deploy-aws.yml, security.yml</text>
+  <rect x="1110" y="368" width="442" height="100" rx="10" fill="#f1f5f9" stroke="#475569"/>
+  <text x="1331" y="396" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">Infrastructure as code</text>
+  <text x="1331" y="416" text-anchor="middle" font-size="9" fill="#475569">terraform/: Lambda zip, API GW, DDB, SNS</text>
+  <text x="1331" y="432" text-anchor="middle" font-size="9" fill="#475569">infrastructure/cdk/: full stacks + optional JWT</text>
+  <text x="1331" y="448" text-anchor="middle" font-size="9" fill="#475569">.github/workflows: deploy-aws.yml, security.yml</text>
 
   <!-- Legend -->
-  <rect x="1110" y="628" width="442" height="200" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="1331" y="656" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">Legend</text>
-  <line x1="1130" y1="672" x2="1180" y2="672" stroke="#1e3a5f" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="1190" y="676" font-size="9" fill="#475569">Primary data / control flow</text>
-  <line x1="1130" y1="692" x2="1180" y2="692" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow-green)"/>
-  <text x="1190" y="696" font-size="9" fill="#475569">MCP HTTP (tool plane)</text>
-  <line x1="1130" y1="712" x2="1180" y2="712" stroke="#d97706" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrow-dim)"/>
-  <text x="1190" y="716" font-size="9" fill="#475569">LangSmith trace export</text>
-  <line x1="1130" y1="732" x2="1180" y2="732" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3"/>
-  <text x="1190" y="736" font-size="9" fill="#475569">Metrics / logs to CloudWatch</text>
-  <rect x="1130" y="748" width="50" height="16" rx="4" fill="#f0fdf4" stroke="#22c55e" stroke-dasharray="4 2"/>
-  <text x="1190" y="760" font-size="9" fill="#475569">Optional / future path</text>
-  <rect x="1130" y="772" width="50" height="16" rx="4" fill="#faf5ff" stroke="#9333ea"/>
-  <text x="1190" y="784" font-size="9" fill="#475569">Security / governance strip</text>
+  <rect x="1110" y="486" width="442" height="200" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1331" y="514" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">Legend</text>
+  <line x1="1130" y1="530" x2="1180" y2="530" stroke="#1e3a5f" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1190" y="534" font-size="9" fill="#475569">Primary data / control flow</text>
+  <line x1="1130" y1="550" x2="1180" y2="550" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow-green)"/>
+  <text x="1190" y="554" font-size="9" fill="#475569">MCP HTTP (tool plane)</text>
+  <line x1="1130" y1="570" x2="1180" y2="570" stroke="#d97706" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrow-dim)"/>
+  <text x="1190" y="574" font-size="9" fill="#475569">LangSmith trace export</text>
+  <line x1="1130" y1="590" x2="1180" y2="590" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="1190" y="594" font-size="9" fill="#475569">Metrics / logs to CloudWatch</text>
+  <rect x="1130" y="606" width="50" height="16" rx="4" fill="#f0fdf4" stroke="#22c55e" stroke-dasharray="4 2"/>
+  <text x="1190" y="618" font-size="9" fill="#475569">Optional / future path</text>
+  <rect x="1130" y="630" width="50" height="16" rx="4" fill="#faf5ff" stroke="#9333ea"/>
+  <text x="1190" y="642" font-size="9" fill="#475569">Security / governance strip</text>
 
-  <text x="1331" y="812" text-anchor="middle" font-size="8" fill="#64748b">Export PNG: cairosvg, Inkscape, or browser print</text>
+  <text x="1331" y="670" text-anchor="middle" font-size="8" fill="#64748b">Export PNG: cairosvg, Inkscape, or browser print</text>
+
+  <!-- Three pillars: LLM Gateway | Evaluation | Governance -->
+  <rect x="32" y="1005" width="1536" height="118" rx="12" fill="#ffffff" stroke="#475569" stroke-width="2" filter="url(#cardShadow)"/>
+  <text x="800" y="1030" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Three enterprise pillars (full detail: docs/ARCHITECTURE.md section 2)</text>
+
+  <rect x="48" y="1040" width="492" height="74" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="294" y="1062" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">1 LLM Gateway</text>
+  <text x="58" y="1080" font-size="8" fill="#334155">API Gateway to Lambda | Amazon Bedrock (Converse, profiles) | ModelRouter | Guardrails | AgentCore + MCP tools</text>
+  <text x="58" y="1094" font-size="8" fill="#64748b">Optional: LiteLLM / Portkey proxy | stays behind same auth + policy</text>
+
+  <rect x="554" y="1040" width="492" height="74" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+  <text x="800" y="1062" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">2 Evaluation</text>
+  <text x="564" y="1080" font-size="8" fill="#334155">LangSmith traces + datasets + online eval | CloudWatch EMF metrics | Bedrock model eval / prompt mgmt</text>
+  <text x="564" y="1094" font-size="8" fill="#64748b">Also: Braintrust, Patronus, Galileo, Arize, Fiddler, W&amp;B Weave (vendor choice)</text>
+
+  <rect x="1060" y="1040" width="492" height="74" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="1306" y="1062" text-anchor="middle" font-size="12" font-weight="700" fill="#166534">3 Governance</text>
+  <text x="1070" y="1080" font-size="8" fill="#334155">JWT / IAM | PII scrub + Guardrails | OPA policies (calclaim.rego) | HITL SNS | immutable audit | CI security</text>
+  <text x="1070" y="1094" font-size="8" fill="#64748b">Target: Verified Permissions (Cedar), Macie, KMS</text>
 
   <!-- Footer -->
-  <text x="800" y="1148" text-anchor="middle" font-size="10" fill="#64748b">Vector: docs/calclaim-architecture-aws-native.svg | Raster: docs/calclaim-architecture-aws-native.png</text>
-  <text x="800" y="1166" text-anchor="middle" font-size="9" fill="#94a3b8">Version: enterprise detail view | March 2026</text>
+  <text x="800" y="1248" text-anchor="middle" font-size="10" fill="#64748b">Vector: docs/calclaim-architecture-aws-native.svg | Raster: docs/calclaim-architecture-aws-native.png</text>
+  <text x="800" y="1268" text-anchor="middle" font-size="9" fill="#94a3b8">Version: LangSmith + CloudWatch observability | March 2026</text>
 </svg>

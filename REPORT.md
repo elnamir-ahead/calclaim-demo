@@ -27,7 +27,7 @@ The demo is suitable for **local proof-of-concept** and as a **starting point** 
 
 ### AWS-native service view (target / mapping diagram)
 
-The following diagram reframes the same logical stages using **AWS service names** and explicitly includes: **Amazon API Gateway** as the north–south entry, an **observability** column (**Amazon CloudWatch**, **AWS X-Ray**, **AWS CloudTrail**, optional **Amazon EventBridge**), and **LangSmith** (LangChain Cloud) for **LLM trace and eval** export alongside Bedrock — not a substitute for CloudWatch/X-Ray, but the standard place teams send chain/agent spans from LangChain/LangGraph.
+The following diagram reframes the same logical stages using **AWS service names** and explicitly includes: **Amazon API Gateway** as the north–south entry, an **observability** column (**Amazon CloudWatch** — logs, metric filters, alarms, EMF) and **LangSmith** (LangChain Cloud) for **LLM trace and eval** export alongside Bedrock. (X-Ray, CloudTrail, and EventBridge remain available in AWS and in this repo where wired, but are not shown on the reference diagram.)
 
 The reference code in this repo still uses **LangGraph** locally; this picture is the **cloud-native alignment** story. For a lossless, editable version (e.g. for slides), use the SVG source.
 
@@ -35,7 +35,7 @@ The reference code in this repo still uses **LangGraph** locally; this picture i
 
 *Raster:* `docs/calclaim-architecture-aws-native.png` · *Vector (full labels):* `docs/calclaim-architecture-aws-native.svg`
 
-**Narrative architecture (detailed, readable first):** see **`docs/ARCHITECTURE.md`** — end-to-end REST path, how MCP differs from API Gateway, LangGraph node order, AWS service mapping, two-layer observability (CloudWatch vs LangSmith), and an optional **S3 + Amazon Textract** hook for document claims.
+**Narrative architecture (detailed, readable first):** see **`docs/ARCHITECTURE.md`** — **§2** defines the three pillars (**LLM Gateway**, **Evaluation**, **Governance**); later sections cover REST path, MCP vs API Gateway, LangGraph order, AWS mapping, observability, enterprise eval tools, optional **S3 + Textract**, and controls.
 
 ---
 

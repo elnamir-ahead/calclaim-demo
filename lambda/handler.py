@@ -180,6 +180,12 @@ async def adjudicate_claim(req: AdjudicateRequest):
 
     try:
         result = await _run_workflow(initial_state)
+        try:
+            from src.utils.cloudwatch_emf import emit_adjudication_emf
+
+            emit_adjudication_emf(result)
+        except Exception:
+            pass
         return {"success": True, "session_id": session_id, "result": result}
     except Exception as exc:
         logger.exception("Adjudication workflow error: %s", exc)
@@ -211,6 +217,12 @@ async def reverse_claim(req: ReversalRequest):
 
     try:
         result = await _run_workflow(initial_state)
+        try:
+            from src.utils.cloudwatch_emf import emit_adjudication_emf
+
+            emit_adjudication_emf(result)
+        except Exception:
+            pass
         return {"success": True, "session_id": session_id, "result": result}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

@@ -1,6 +1,6 @@
 """
 Observability stack — CloudWatch dashboards, alarms, and log metric filters.
-Mirrors the Observability panel in the architecture diagram.
+Aligned with the AWS-native architecture diagram (LangSmith + CloudWatch).
 """
 
 from aws_cdk import (
