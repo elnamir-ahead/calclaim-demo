@@ -4,10 +4,11 @@ resource "aws_cloudwatch_log_group" "lambda_api" {
 }
 
 resource "aws_lambda_function" "api" {
-  filename         = "${path.module}/build/lambda.zip"
   function_name    = "calclaim-api"
   role             = aws_iam_role.lambda.arn
   handler          = "lambda.handler.handler"
+  s3_bucket        = aws_s3_bucket.lambda_code.id
+  s3_key           = aws_s3_object.lambda_package.key
   source_code_hash = filebase64sha256("${path.module}/build/lambda.zip")
   runtime          = "python3.12"
   timeout          = var.lambda_timeout_seconds
@@ -49,5 +50,6 @@ resource "aws_lambda_function" "api" {
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic,
     aws_cloudwatch_log_group.lambda_api,
+    aws_s3_object.lambda_package,
   ]
 }
