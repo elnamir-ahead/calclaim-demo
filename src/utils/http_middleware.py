@@ -21,6 +21,11 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         "/redoc",
         "/openapi.json",
         "/favicon.ico",
+        "/demo",
+    )
+
+    public_path_prefixes: ClassVar[Tuple[str, ...]] = (
+        "/demo/ui",
     )
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -35,6 +40,8 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
 
         path = request.url.path
         if path in self.public_paths:
+            return await call_next(request)
+        if any(path == p or path.startswith(p + "/") for p in self.public_path_prefixes):
             return await call_next(request)
 
         auth = request.headers.get("Authorization") or ""

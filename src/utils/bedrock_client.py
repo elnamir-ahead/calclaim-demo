@@ -26,6 +26,14 @@ logger = logging.getLogger(__name__)
 
 REGION = os.getenv("BEDROCK_REGION", "us-east-1")
 
+# Claude 3.5 Sonnet v2: many regions require a *system inference profile* ID (e.g. us.*), not the
+# raw foundation-model ID — otherwise Converse returns ValidationException (on-demand not supported).
+# Override with BEDROCK_MODEL_SONNET / BEDROCK_MODEL_HAIKU if your account uses different profiles.
+_DEFAULT_SONNET = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+_DEFAULT_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0"
+SONNET_MODEL_ID = os.getenv("BEDROCK_MODEL_SONNET", _DEFAULT_SONNET).strip() or _DEFAULT_SONNET
+HAIKU_MODEL_ID = os.getenv("BEDROCK_MODEL_HAIKU", _DEFAULT_HAIKU).strip() or _DEFAULT_HAIKU
+
 # invoke_agent rejects IDs with hyphens / length > 10 (see ValidationException in demo logs).
 _BEDROCK_INVOKE_ID_RE = re.compile(r"^[0-9a-zA-Z]{1,10}$")
 
@@ -86,7 +94,7 @@ def _bedrock_agent_runtime() -> boto3.client:
 def get_claude_sonnet() -> ChatBedrockConverse:
     """Claude 3.5 Sonnet — complex reasoning, orchestration."""
     kwargs: dict[str, Any] = {
-        "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "model_id": SONNET_MODEL_ID,
         "region_name": REGION,
         "max_tokens": 4096,
         "temperature": 0.0,
@@ -104,7 +112,7 @@ def get_claude_sonnet() -> ChatBedrockConverse:
 def get_claude_haiku() -> ChatBedrockConverse:
     """Claude 3 Haiku — fast, low-cost for simple lookups."""
     kwargs: dict[str, Any] = {
-        "model_id": "anthropic.claude-3-haiku-20240307-v1:0",
+        "model_id": HAIKU_MODEL_ID,
         "region_name": REGION,
         "max_tokens": 1024,
         "temperature": 0.0,

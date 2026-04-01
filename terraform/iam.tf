@@ -104,3 +104,27 @@ resource "aws_iam_role_policy" "ssm_optional" {
     }]
   })
 }
+
+# Custom audit log group (/calclaim/audit) — not covered by AWSLambdaBasicExecutionRole (/aws/lambda/* only).
+resource "aws_iam_role_policy" "audit_cloudwatch_logs" {
+  name = "audit-cloudwatch-logs"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams",
+      ]
+      Resource = [
+        aws_cloudwatch_log_group.audit.arn,
+        "${aws_cloudwatch_log_group.audit.arn}:*",
+      ]
+    }]
+  })
+}
+

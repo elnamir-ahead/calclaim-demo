@@ -259,3 +259,6 @@ class TestPillarStatus:
         res = eng.evaluate_claim_access("viewer", claim, "adjudicate")
         assert res.decision == "DENY"
         assert "POL-RBAC" in res.policy_id
+
+
+# calcClaim2 PDF-aligned component tests: see tests/test_calc_claim2_components.py

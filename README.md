@@ -32,6 +32,9 @@ Request
 │  Supervisor Agent (Claude Haiku)                                     │
 │    • Intent classification + routing                                 │
 │    • AgentCore (CalcClaim) → MCP (optional) → Claims Agent (Sonnet)  │
+│    • Claims math follows calcClaim2 modules: costs → copay →         │
+│      Medicare D (if applicable) → margin/MBA → deductible/caps →     │
+│      special (DAW, tax, fees), then validate                         │
 │    • Formulary Agent (Haiku) — tier / PA lookup                      │
 │    • Compliance Agent (Sonnet) — HIPAA audit                         │
 └──────────────────────────────────────────────────────────────────────┘
@@ -49,6 +52,8 @@ Request
   ▼
 Response + Audit Trail
 ```
+
+**calcClaim2 alignment:** On the claims path, seven LangGraph nodes run the deterministic demo pipeline in `src/graph/calc_claim2_components.py` (classes and methods named like the C++ modules: `calculateBasicCosts`, `applyLesserOfLogic`, `calculateMACPricing`, `calculateCopay`, `processMedicareD`, `processMargin`, `processDeductibleAndCaps`, `processSpecialCases`, `validateResults`). Outputs accumulate in state key `calc_claim2_context` and are passed to the claims LLM plus API field `calc_claim2` on the final response. This mirrors the calcClaim vs calcClaim2 PDF component breakdown; it is **not** the production NCRX binary.
 
 **Two external surfaces (both belong in production):**
 
@@ -129,7 +134,8 @@ calclaim-demo/
 │   ├── workflows/deploy-aws.yml  # CI: security scan + Terraform apply (main)
 │   └── DEPLOY_SETUP.md           # GitHub secrets & IAM notes
 ├── tests/
-│   └── test_calclaim.py          # Unit + integration tests
+│   ├── test_calclaim.py           # Unit + integration tests
+│   └── test_calc_claim2_components.py  # PDF-aligned calcClaim2 component tests
 ├── requirements.txt
 └── .env.example
 ```
@@ -179,7 +185,29 @@ python3 scripts/run_demo.py --generate-data
 
 ```bash
 python3 -m pytest tests/ -v
+# calcClaim2 PDF–aligned component suite only:
+python3 -m pytest tests/test_calc_claim2_components.py -v
 ```
+
+#### Testing strategy (calcClaim vs calcClaim2 PDF)
+
+The comparison PDF contrasts **monolithic calcClaim** testing (large integration tests, weak isolation, ~58% coverage) with **calcClaim2** **per-component unit tests**, faster runs, and explicit categories (Medicare gap, family deductible, multi-source pricing, DAW, vaccine fees, MBA recursion, orchestrator failure recovery).
+
+This repo’s **Python demo** is not the C++ test suite, but **`tests/test_calc_claim2_components.py`** maps those expectations to pytest classes so stakeholders can trace **doc → test → module**:
+
+| PDF / doc theme | Demo implementation | Pytest coverage |
+|-----------------|---------------------|-----------------|
+| Focused unit tests per component vs one giant integration test | `src/graph/calc_claim2_components.py` | One class per C++-named component |
+| **CostCalculationCore** — multi-source pricing, MAC vs AWP vs WAC | `calculate_mac_pricing`, `apply_lesser_of_logic`, `calculate_basic_costs` | `TestCostCalculationCorePDF` |
+| **CopayCalculator** — tier copays, compound tier mismatch, inflation | `calculate_copay`, `handle_compound_drugs`, `inflate_to_copay_or_uc` | `TestCopayCalculatorPDF` |
+| **MedicareDProcessor** — coverage gap, TrOOP, catastrophic, plan pay % | `process_medicare_d`, `handle_coverage_gap`, `calculate_tr_oop` | `TestMedicareDProcessorPDF` |
+| **MarginProcessor** — MBA, margin caps, recursion limit / return code 3 | `process_margin`, `apply_margin_limits`, `process_margin_with_recursion` | `TestMarginProcessorPDF` |
+| **DeductibleCapProcessor** — family deductible partial apply, SDC / benefit caps | `process_family_deductible`, `apply_cap_limits`, `process_deductible_and_caps` | `TestDeductibleCapProcessorPDF` |
+| **SpecialProcessor** — DAW, vaccine admin, multi-state tax (IL demo rate, TX none) | `calculate_daw`, `process_vaccine_admin_fee`, `process_special_cases` | `TestSpecialProcessorPDF` |
+| **ClaimCalculationOrchestrator** — full pipeline shape, `validateResults`, failure → return code 6 | `orchestrate_calculation`, `validate_results` | `TestClaimCalculationOrchestratorPDF` |
+| Failure isolation / modular maintenance (PDF qualitative goal) | Lazy `src/graph/__init__.py` so component tests do not import LangGraph/Bedrock | `TestCalcClaim2TestingStrategyMeta` |
+
+**Return codes** in the demo follow the doc’s spirit: **0** success, **3** MBA recursion limit (margin), **6** orchestration or validation failure.
 
 ### 5. Start API server locally
 
@@ -189,10 +217,14 @@ uvicorn lambda.handler:app --reload --port 8000
 
 API docs: http://localhost:8000/docs
 
+**Demo web portal:** http://localhost:8000/demo — static UI under `/demo/ui/` (see `web/README.md`).
+
 **Key endpoints:**
 
 | Method | Path | Description |
 |---|---|---|
+| `GET` | `/demo` | Redirect to demo portal |
+| `GET` | `/demo/ui/` | CalcClaim adjudication demo (static SPA) |
 | `POST` | `/claims/adjudicate` | Run full adjudication workflow |
 | `POST` | `/claims/reverse` | Initiate claim reversal (HITL) |
 | `GET` | `/claims/{id}/audit` | Retrieve immutable audit trail |

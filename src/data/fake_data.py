@@ -134,15 +134,15 @@ def generate_claim(member: dict, scenario: str = "auto") -> dict[str, Any]:
     copay = tier_copays.get(tier, 35.00)
     plan_pay = max(0, drug["cost"] - copay)
 
-    # Force certain scenarios for demo diversity
-    if scenario == "prior_auth_required" or drug.get("requires_pa"):
+    # Force certain scenarios for demo diversity (explicit scenario wins over random drug flags)
+    if scenario == "approved":
+        status = "approved"
+    elif scenario == "prior_auth_required" or drug.get("requires_pa"):
         status = random.choice(["rejected_pending_pa", "approved_with_pa"])
     elif scenario == "refill_too_soon":
         status = "rejected_refill_too_soon"
     elif scenario == "drug_interaction":
         status = "rejected_dur"
-    elif scenario == "approved":
-        status = "approved"
     else:
         status = random.choices(
             ["approved", "approved", "approved", "rejected_pending_pa",

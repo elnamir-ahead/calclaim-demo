@@ -4,6 +4,8 @@ langchain>=0.3.0
 langchain-aws>=0.2.0
 langchain-community>=0.3.0
 langsmith>=0.1.0
+langfuse>=2.0.0
+launchdarkly-server-sdk>=9.0.0
 
 # AWS SDK
 boto3>=1.35.0

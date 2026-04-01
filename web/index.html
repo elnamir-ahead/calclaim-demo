@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/demo/ui/favicon.svg" type="image/svg+xml" />
+  <title>CalcClaim — Enterprise adjudication demo</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to adjudication</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">◆</span>
+        <div>
+          <h1>CalcClaim</h1>
+          <p class="tagline">Enterprise agentic claim adjudication · demo portal</p>
+        </div>
+      </div>
+      <nav class="header-actions" aria-label="Utilities">
+        <button type="button" class="btn btn-ghost" id="btn-settings" aria-expanded="false" aria-controls="panel-settings">API settings</button>
+        <a class="btn btn-ghost" href="/docs" target="_blank" rel="noopener">OpenAPI</a>
+        <a class="btn btn-ghost" href="/health" target="_blank" rel="noopener">Health</a>
+      </nav>
+    </div>
+  </header>
+
+  <div id="panel-settings" class="settings-panel hidden" role="region" aria-label="API settings">
+    <div class="settings-inner">
+      <label for="api-base">API base URL</label>
+      <input id="api-base" type="url" inputmode="url" placeholder="Same origin — leave empty when UI is served from this API" autocomplete="off" />
+      <p class="hint">Use when the UI is hosted separately (e.g. static S3 + CloudFront calling API Gateway). Saved in <code>localStorage</code>.</p>
+      <button type="button" class="btn btn-primary" id="btn-save-settings">Save</button>
+    </div>
+  </div>
+
+  <main id="main" class="layout">
+    <section class="intro" aria-labelledby="intro-heading">
+      <h2 id="intro-heading">How teams use this pattern</h2>
+      <ul class="channels">
+        <li><strong>Web &amp; mobile portals</strong> — members and staff submit or review claims through HTTPS APIs (same contract as batch/EDI in the back office).</li>
+        <li><strong>Agentic adjudication</strong> — LangGraph + Bedrock orchestrates scrub, policy, specialists, guardrails, and audit (industry direction: human-in-the-loop + observability).</li>
+        <li><strong>Navitus context</strong> — pass-through PBM model, transparency, and reinvented pharmacy benefits align with <em>controlled</em> rollout of AI (feature flags, audit trails).</li>
+      </ul>
+    </section>
+
+    <section class="panel cc2-qa-panel" aria-labelledby="cc2-heading">
+      <h2 id="cc2-heading">calcClaim2 engine &amp; PDF test alignment</h2>
+      <p class="lede">
+        The <strong>calcClaim vs calcClaim2</strong> comparison document describes a <strong>modular claim-calculation pipeline</strong>
+        and a <strong>per-component testing strategy</strong> (focused unit tests instead of one 12k-line integration test).
+        This demo runs that pipeline on the claims path; the table below maps each C++-named module to pytest coverage.
+      </p>
+
+      <div class="cc2-pipeline-static" aria-label="calcClaim2 pipeline order">
+        <span class="cc2-pipe-label">Runtime order</span>
+        <ol class="cc2-steps-row">
+          <li><span class="cc2-step-num">1</span> CostCore</li>
+          <li><span class="cc2-step-num">2</span> Copay</li>
+          <li><span class="cc2-step-num">3</span> Medicare&nbsp;D</li>
+          <li><span class="cc2-step-num">4</span> Margin&nbsp;/&nbsp;MBA</li>
+          <li><span class="cc2-step-num">5</span> Deductible&nbsp;/&nbsp;caps</li>
+          <li><span class="cc2-step-num">6</span> Special</li>
+          <li><span class="cc2-step-num">7</span> Orchestrator</li>
+        </ol>
+      </div>
+
+      <div class="cc2-table-wrap">
+        <table class="cc2-test-table">
+          <thead>
+            <tr>
+              <th scope="col">Component</th>
+              <th scope="col">PDF / pytest focus</th>
+              <th scope="col">Pytest class</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CostCalculationCore</td>
+              <td>Multi-source pricing (MAC vs AWP vs WAC), lesser-of, dispensing</td>
+              <td><code>TestCostCalculationCorePDF</code></td>
+            </tr>
+            <tr>
+              <td>CopayCalculator</td>
+              <td>Tier copays, compound highest-tier, inflation, cap by cost basis</td>
+              <td><code>TestCopayCalculatorPDF</code></td>
+            </tr>
+            <tr>
+              <td>MedicareDProcessor</td>
+              <td>Coverage gap, TrOOP, catastrophic, plan pay % in gap</td>
+              <td><code>TestMedicareDProcessorPDF</code></td>
+            </tr>
+            <tr>
+              <td>MarginProcessor</td>
+              <td>MBA margin, caps, recursion limit → return code 3</td>
+              <td><code>TestMarginProcessorPDF</code></td>
+            </tr>
+            <tr>
+              <td>DeductibleCapProcessor</td>
+              <td>Family deductible partial apply, SDC / benefit caps</td>
+              <td><code>TestDeductibleCapProcessorPDF</code></td>
+            </tr>
+            <tr>
+              <td>SpecialProcessor</td>
+              <td>DAW, vaccine admin fee, multi-state tax (IL demo)</td>
+              <td><code>TestSpecialProcessorPDF</code></td>
+            </tr>
+            <tr>
+              <td>ClaimCalculationOrchestrator</td>
+              <td>Full pipeline, validateResults, failure → return code 6</td>
+              <td><code>TestClaimCalculationOrchestratorPDF</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="cc2-cli-hint">
+        <strong>Run the PDF-aligned suite locally:</strong>
+        <code class="cc2-cli">pytest tests/test_calc_claim2_components.py -v</code>
+      </p>
+      <p class="muted tiny">After you adjudicate a claim below, this page also shows <strong>which pipeline stages ran</strong> and the live <code>calc_claim2</code> JSON from the API.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="run-heading">
+      <h2 id="run-heading">Run adjudication</h2>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab active" role="tab" aria-selected="true" aria-controls="tab-quick" id="tab-btn-quick">Quick demo</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="tab-guided" id="tab-btn-guided">Guided claim</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="tab-json" id="tab-btn-json">JSON</button>
+      </div>
+
+      <div id="tab-quick" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-quick">
+        <p class="lede">Generates a synthetic claim server-side and runs the full workflow — fastest for stakeholder demos.</p>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-quick">Generate &amp; adjudicate</button>
+      </div>
+
+      <div id="tab-guided" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-guided" hidden>
+        <p class="lede">Pick a drug tier and scenario; the browser builds a minimal claim JSON (no real PHI).</p>
+        <div class="form-grid">
+          <label>Drug (sample)
+            <select id="guided-drug"></select>
+          </label>
+          <label>Plan
+            <select id="guided-plan"></select>
+          </label>
+          <label>Scenario
+            <select id="guided-scenario">
+              <option value="approved">Likely approved</option>
+              <option value="prior_auth">Prior authorization path</option>
+              <option value="dur">DUR alert path</option>
+            </select>
+          </label>
+          <label>Actor ID (for flags / audit)
+            <input id="guided-actor" type="text" value="portal-user-001" autocomplete="username" />
+          </label>
+        </div>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-guided">Adjudicate guided claim</button>
+      </div>
+
+      <div id="tab-json" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-json" hidden>
+        <p class="lede">Paste a full claim JSON. Use <strong>Load sample</strong> for a safe template.</p>
+        <div class="json-actions">
+          <button type="button" class="btn btn-secondary" id="btn-load-sample">Load sample</button>
+        </div>
+        <label class="sr-only" for="claim-json">Claim JSON</label>
+        <textarea id="claim-json" rows="14" spellcheck="false" aria-label="Claim JSON"></textarea>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-json">Adjudicate JSON</button>
+      </div>
+
+      <div id="status" class="status-banner hidden" role="status" aria-live="polite"></div>
+      <div id="error" class="error-banner hidden" role="alert"></div>
+    </section>
+
+    <section class="panel result-panel hidden" id="result-section" aria-live="polite">
+      <div class="result-header">
+        <h2>Adjudication result</h2>
+        <div class="result-actions">
+          <button type="button" class="btn btn-secondary" id="btn-print">Print / PDF</button>
+          <button type="button" class="btn btn-ghost" id="btn-copy">Copy JSON</button>
+        </div>
+      </div>
+      <div id="result-summary" class="result-summary"></div>
+      <details class="raw-details">
+        <summary>Raw response</summary>
+        <pre id="result-raw" class="raw-pre"></pre>
+      </details>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p><strong>Demo only.</strong> Synthetic data — not production PHI. Aligns with common industry surfaces: web portal, mobile apps, and batch/NCPDP feeds sharing the same adjudication service.</p>
+    <p class="footer-note">Inspired by modern PBM transparency and agentic AI guardrails — not an official Navitus production UI.</p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

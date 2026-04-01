@@ -55,6 +55,7 @@ resource "aws_lambda_function" "api" {
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic,
     aws_cloudwatch_log_group.lambda_api,
+    aws_cloudwatch_log_group.audit,
     aws_s3_object.lambda_package,
   ]
 }

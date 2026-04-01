@@ -125,6 +125,7 @@ def print_workflow_result(result: dict) -> None:
 async def run_claim(claim: dict, action: str = "adjudicate") -> dict:
     """Run a single claim through the LangGraph workflow."""
     from src.graph.claims_workflow import compile_claims_graph
+    from src.utils.launchdarkly_flags import evaluate_calclaim_flags
 
     graph = compile_claims_graph()
 
@@ -139,6 +140,7 @@ async def run_claim(claim: dict, action: str = "adjudicate") -> dict:
         "workflow_steps": [],
         "errors": [],
         "audit_event_ids": [],
+        "feature_flags": evaluate_calclaim_flags("demo-runner"),
     }
 
     result_state = await graph.ainvoke(state)

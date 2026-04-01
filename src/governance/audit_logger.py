@@ -35,6 +35,7 @@ AuditEventType = Literal[
     "ADJUDICATION_STARTED",
     "AGENTCORE_INVOKED",
     "MCP_TOOLS_INVOKED",
+    "CALC_CLAIM2_STAGE",
     "ADJUDICATION_COMPLETE",
     "POLICY_EVALUATED",
     "GUARDRAIL_TRIGGERED",
@@ -108,13 +109,25 @@ class AuditLogger:
 
     def _ensure_log_stream(self) -> None:
         stream_name = f"calclaim/{datetime.utcnow().strftime('%Y/%m/%d')}"
+
+        def _create_stream() -> None:
+            try:
+                self._cw_logs.create_log_stream(
+                    logGroupName=AUDIT_LOG_GROUP,
+                    logStreamName=stream_name,
+                )
+            except self._cw_logs.exceptions.ResourceAlreadyExistsException:
+                pass
+
         try:
-            self._cw_logs.create_log_stream(
-                logGroupName=AUDIT_LOG_GROUP,
-                logStreamName=stream_name,
-            )
-        except self._cw_logs.exceptions.ResourceAlreadyExistsException:
-            pass
+            _create_stream()
+        except self._cw_logs.exceptions.ResourceNotFoundException:
+            # Log group missing (e.g. Terraform not applied) — create if IAM allows.
+            try:
+                self._cw_logs.create_log_group(logGroupName=AUDIT_LOG_GROUP)
+            except self._cw_logs.exceptions.ResourceAlreadyExistsException:
+                pass
+            _create_stream()
         self._cw_stream = stream_name
 
     # ------------------------------------------------------------------

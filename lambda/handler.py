@@ -21,8 +21,12 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any, Optional
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from mangum import Mangum
 
@@ -46,6 +50,12 @@ from src.utils.pillar_status import build_pillar_demo_report
 from src.data.fake_data import generate_demo_dataset
 from src.utils.request_context import get_correlation_id
 from src.utils.http_middleware import BearerAuthMiddleware, CorrelationIdMiddleware
+from src.utils.launchdarkly_flags import (
+    evaluate_calclaim_flags,
+    init_launchdarkly,
+    shutdown_launchdarkly,
+)
+from src.utils.langfuse_tracing import build_graph_callbacks
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +75,12 @@ _graph = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _graph
+    init_launchdarkly()
     logger.info("Compiling CalcClaim LangGraph...")
     _graph = compile_claims_graph()
     logger.info("CalcClaim graph ready.")
     yield
+    shutdown_launchdarkly()
 
 
 app = FastAPI(
@@ -135,7 +147,11 @@ def _get_graph():
 
 async def _run_workflow(state: dict[str, Any]) -> dict[str, Any]:
     graph = _get_graph()
-    result = await graph.ainvoke(state)
+    callbacks = build_graph_callbacks()
+    if callbacks:
+        result = await graph.ainvoke(state, config={"callbacks": callbacks})
+    else:
+        result = await graph.ainvoke(state)
     return result.get("final_response", {})
 
 
@@ -240,6 +256,7 @@ async def adjudicate_claim(req: AdjudicateRequest):
         "workflow_steps": [],
         "errors": [],
         "audit_event_ids": [],
+        "feature_flags": evaluate_calclaim_flags(req.actor_id),
     }
 
     try:
@@ -277,6 +294,7 @@ async def reverse_claim(req: ReversalRequest):
         "workflow_steps": [],
         "errors": [],
         "audit_event_ids": [],
+        "feature_flags": evaluate_calclaim_flags(req.actor_id),
     }
 
     try:
@@ -347,6 +365,7 @@ async def demo_batch(n_claims: int = 5):
             "workflow_steps": [],
             "errors": [],
             "audit_event_ids": [],
+            "feature_flags": evaluate_calclaim_flags("demo-system"),
         }
         try:
             result = await _run_workflow(state)
@@ -359,6 +378,38 @@ async def demo_batch(n_claims: int = 5):
         "processed": len(results),
         "results": results,
     }
+
+
+# ---------------------------------------------------------------------------
+# Demo web portal (static UI → same API — industry pattern: portal + REST)
+# ---------------------------------------------------------------------------
+
+_WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+if _WEB_DIR.is_dir():
+    app.mount(
+        "/demo/ui",
+        StaticFiles(directory=str(_WEB_DIR), html=True),
+        name="demo_ui",
+    )
+
+
+@app.get("/demo", include_in_schema=False)
+async def demo_portal_redirect():
+    """Redirect to the CalcClaim demo portal (served under /demo/ui/)."""
+    return RedirectResponse(url="/demo/ui/", status_code=302)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def root_favicon():
+    """
+    Browsers request /favicon.ico at the origin; UI lives under /demo/ui/.
+    Serve the same icon as the portal (SVG) so this stops 404ing in logs.
+    """
+    if _WEB_DIR.is_dir():
+        svg = _WEB_DIR / "favicon.svg"
+        if svg.is_file():
+            return FileResponse(svg, media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="favicon not found")
 
 
 # ---------------------------------------------------------------------------

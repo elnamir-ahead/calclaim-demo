@@ -1,6 +1,12 @@
 """
 CalcClaim LangGraph Workflow — Enterprise Agentic AI demo.
 
+Deterministic **calcClaim2** pipeline nodes run on the claims path (after MCP):
+CostCalculationCore → CopayCalculator → MedicareDProcessor → MarginProcessor →
+DeductibleCapProcessor → SpecialProcessor → ClaimCalculationOrchestrator
+(``validateResults``). Results live in ``calc_claim2_context``; the LLM aligns
+with that output. AgentCore/MCP still supply optional tool context.
+
 Graph topology:
   START
     │
@@ -21,7 +27,10 @@ Graph topology:
     │   mcp_tools_node        (optional — MCP streamable HTTP formulary_tier_lookup)
     │         │
     │         ▼
-    │   claims_agent_node     (Claude Sonnet — adjudication; AgentCore + MCP context)
+    │   calc_claim2_*         (7 nodes — CostCore, Copay, MedicareD, Margin, DedCap, Special, Orchestrator)
+    │         │
+    │         ▼
+    │   claims_agent_node     (Claude Sonnet — adjudication; calcClaim2 JSON + AgentCore + MCP)
     ├─► formulary_node        (Claude Haiku — formulary lookup)
     └─► compliance_node       (Claude Sonnet — HIPAA/policy audit)
               │
@@ -49,7 +58,7 @@ import os
 import json
 import logging
 import uuid
-from typing import Any
+from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
@@ -67,8 +76,106 @@ from src.utils.bedrock_client import (
     get_agentcore_client,
 )
 from src.utils.langsmith_config import build_run_metadata
+from src.utils.launchdarkly_flags import use_agentcore_effective, use_mcp_tools_effective
+from src.graph.calc_claim2_components import (
+    ClaimCalculationOrchestrator,
+    CopayCalculator,
+    CostCalculationCore,
+    DeductibleCapProcessor,
+    MarginProcessor,
+    MedicareDProcessor,
+    SpecialProcessor,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _cc2_ctx_from_state(state: ClaimWorkflowState) -> dict[str, Any]:
+    existing = state.get("calc_claim2_context")
+    if not existing:
+        return {"return_code": 0, "error_message": None}
+    return dict(existing)
+
+
+def _cc2_copay_after_medicare(ctx: dict[str, Any]) -> float:
+    cop = ctx.get("copay") or {}
+    amt = float(cop.get("copay_amount") or 0)
+    md = ctx.get("medicare_d") or {}
+    if md.get("applied"):
+        amt = float(md.get("adjusted_copay") or amt)
+    return amt
+
+
+def _synthetic_adjudication_from_calc_claim2(
+    state: ClaimWorkflowState,
+    llm_error: Optional[str] = None,
+) -> dict[str, Any]:
+    """
+    Build adjudication JSON from deterministic calcClaim2 context when Bedrock LLM
+    is unavailable or returns invalid model / parse errors — keeps demos usable.
+    """
+    safe = state.get("safe_claim") or {}
+    cc2 = state.get("calc_claim2_context") or {}
+    orch = cc2.get("orchestrator") or {}
+
+    raw_status = (safe.get("status") or "approved").lower()
+    if "rejected" in raw_status and "pa" in raw_status:
+        status = "pending_pa"
+    elif "rejected" in raw_status or raw_status == "reversed":
+        status = "rejected"
+    elif "approved" in raw_status:
+        status = "approved"
+    else:
+        status = "pending_review"
+
+    patient = float(orch.get("patient_pay_demo") or 0)
+    plan = float(orch.get("plan_pay_demo") or 0)
+    if patient == 0 and plan == 0 and cc2:
+        cop = cc2.get("copay") or {}
+        md = cc2.get("medicare_d") or {}
+        c = float(md.get("adjusted_copay") if md.get("applied") else cop.get("copay_amount") or 0)
+        margin = cc2.get("margin") or {}
+        ded = cc2.get("deductible_cap") or {}
+        plan = float(ded.get("plan_pay_after_caps") or margin.get("plan_pay_after_margin") or 0)
+        spec = cc2.get("special") or {}
+        patient = c + float(spec.get("extra_patient_amount") or 0)
+
+    reject_code = safe.get("reject_code")
+    reject_reason = safe.get("reject_message") or safe.get("reject_reason")
+    if status == "approved":
+        reject_code = None
+        reject_reason = None
+
+    reasoning_parts = [
+        "Deterministic adjudication from calcClaim2 pipeline (CostCore → Copay → Medicare D → "
+        "Margin → Deductible/caps → Special → validateResults)."
+    ]
+    if llm_error:
+        reasoning_parts.append(f"LLM step skipped or failed ({llm_error[:200]}); pricing taken from pipeline.")
+
+    return {
+        "status": status,
+        "reject_code": reject_code if status in ("rejected", "pending_pa") else None,
+        "reject_reason": reject_reason if status in ("rejected", "pending_pa") else None,
+        "copay": round(patient, 2),
+        "plan_pay": round(plan, 2),
+        "dur_alerts": list(safe.get("dur_alerts") or []),
+        "reasoning": " ".join(reasoning_parts),
+        "confidence": 0.88 if orch.get("validated") else 0.55,
+        "synthetic_from_calc_claim2": True,
+    }
+
+
+def _use_synthetic_claims_agent_only() -> bool:
+    return os.getenv("CALCLAIM_SYNTHETIC_CLAIMS_AGENT", "").lower() in ("1", "true", "yes")
+
+
+def _synthetic_fallback_on_llm_error() -> bool:
+    return os.getenv("CALCLAIM_SYNTHETIC_FALLBACK_ON_LLM_ERROR", "true").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 # ---------------------------------------------------------------------------
 # System prompts
@@ -93,15 +200,19 @@ Respond in JSON with this exact schema:
 
 CLAIMS_AGENT_SYSTEM = """You are the Navitus CalcClaim Adjudication Agent.
 
-You process pharmacy benefit claims using NCRX workflows.
-You have access to: member eligibility, formulary data, DUR rules, PA status.
+The graph already executed a deterministic **calcClaim2**-style pipeline
+(CostCalculationCore → CopayCalculator → MedicareDProcessor → MarginProcessor →
+DeductibleCapProcessor → SpecialProcessor → orchestrator ``validateResults``).
+You receive its JSON as ground truth for pricing math unless it conflicts with
+eligibility, formulary, DUR, PA, or AgentCore/MCP — then explain in ``reasoning``.
 
 Given a claim, determine:
 1. Is the member eligible on the date of service?
 2. Is the drug covered under the formulary (tier + plan)?
 3. Are there any DUR alerts (drug interactions, duplicate therapy)?
 4. Is prior authorization required and on file?
-5. Calculate: copay, plan liability, dispensing fee.
+5. Emit ``copay`` and ``plan_pay`` consistent with the pipeline's patient/plan demo
+   fields when possible; set ``status`` from clinical rules.
 
 Respond in JSON:
 {
@@ -296,7 +407,7 @@ def agentcore_calcclaim_node(state: ClaimWorkflowState) -> dict[str, Any]:
     claim_id = state.get("claim_id", "UNKNOWN")
     session_id = state.get("session_id", str(uuid.uuid4()))
 
-    if os.getenv("USE_AGENTCORE", "true").lower() in ("false", "0", "no", "off"):
+    if not use_agentcore_effective(state):
         steps = list(state.get("workflow_steps", [])) + ["agentcore_calcclaim_skipped"]
         return {
             "agentcore_result": {"completion": "", "skipped": True, "elapsed_ms": 0},
@@ -357,7 +468,7 @@ def mcp_tools_node(state: ClaimWorkflowState) -> dict[str, Any]:
     session_id = state.get("session_id", "")
     steps = list(state.get("workflow_steps", []))
 
-    if os.getenv("USE_MCP_TOOLS", "true").lower() in ("false", "0", "no", "off"):
+    if not use_mcp_tools_effective(state):
         steps.append("mcp_tools_skipped")
         return {
             "mcp_tool_results": {},
@@ -448,6 +559,236 @@ def mcp_tools_node(state: ClaimWorkflowState) -> dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------------------
+# calcClaim2 pipeline nodes (deterministic demo — see calc_claim2_components.py)
+# ---------------------------------------------------------------------------
+
+
+def calc_claim2_cost_core_node(state: ClaimWorkflowState) -> dict[str, Any]:
+    mtx = state.get("safe_claim") or {}
+    ctx = _cc2_ctx_from_state(state)
+    audit = get_audit_logger()
+    claim_id = state.get("claim_id", "UNKNOWN")
+    try:
+        ctx["cost"] = CostCalculationCore().calculate_basic_costs(mtx)
+        if ctx.get("return_code") != 6:
+            ctx["return_code"] = 0
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("calc_claim2 cost core: %s", exc)
+        ctx["return_code"] = 6
+        ctx["error_message"] = str(exc)
+    steps = list(state.get("workflow_steps", [])) + ["calc_claim2_cost_core"]
+    eid = audit.log(
+        "CALC_CLAIM2_STAGE",
+        claim_id=claim_id,
+        actor="CostCalculationCore",
+        details={"stage": "calculateBasicCosts", "return_code": ctx.get("return_code")},
+        session_id=state.get("session_id", ""),
+        outcome="ERROR" if ctx.get("return_code") == 6 else "SUCCESS",
+    )
+    return {
+        "calc_claim2_context": ctx,
+        "workflow_steps": steps,
+        "current_step": "calc_claim2_cost_core",
+        "audit_event_ids": list(state.get("audit_event_ids", [])) + [eid],
+    }
+
+
+def calc_claim2_copay_node(state: ClaimWorkflowState) -> dict[str, Any]:
+    mtx = state.get("safe_claim") or {}
+    ctx = _cc2_ctx_from_state(state)
+    audit = get_audit_logger()
+    claim_id = state.get("claim_id", "UNKNOWN")
+    cost = ctx.get("cost")
+    if not cost:
+        ctx["return_code"] = 6
+        ctx.setdefault("error_message", "missing cost stage")
+    else:
+        try:
+            ctx["copay"] = CopayCalculator().calculate_copay(mtx, cost)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("calc_claim2 copay: %s", exc)
+            ctx["return_code"] = 6
+            ctx["error_message"] = str(exc)
+    steps = list(state.get("workflow_steps", [])) + ["calc_claim2_copay"]
+    eid = audit.log(
+        "CALC_CLAIM2_STAGE",
+        claim_id=claim_id,
+        actor="CopayCalculator",
+        details={"stage": "calculateCopay"},
+        session_id=state.get("session_id", ""),
+        outcome="ERROR" if ctx.get("return_code") == 6 else "SUCCESS",
+    )
+    return {
+        "calc_claim2_context": ctx,
+        "workflow_steps": steps,
+        "current_step": "calc_claim2_copay",
+        "audit_event_ids": list(state.get("audit_event_ids", [])) + [eid],
+    }
+
+
+def calc_claim2_medicare_d_node(state: ClaimWorkflowState) -> dict[str, Any]:
+    mtx = state.get("safe_claim") or {}
+    ctx = _cc2_ctx_from_state(state)
+    audit = get_audit_logger()
+    claim_id = state.get("claim_id", "UNKNOWN")
+    cop = ctx.get("copay") or {}
+    try:
+        ctx["medicare_d"] = MedicareDProcessor().process_medicare_d(mtx, cop)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("calc_claim2 medicare_d: %s", exc)
+        ctx["return_code"] = 6
+        ctx["error_message"] = str(exc)
+    steps = list(state.get("workflow_steps", [])) + ["calc_claim2_medicare_d"]
+    eid = audit.log(
+        "CALC_CLAIM2_STAGE",
+        claim_id=claim_id,
+        actor="MedicareDProcessor",
+        details={"stage": "processMedicareD", "part_d": (ctx.get("medicare_d") or {}).get("is_part_d")},
+        session_id=state.get("session_id", ""),
+        outcome="ERROR" if ctx.get("return_code") == 6 else "SUCCESS",
+    )
+    return {
+        "calc_claim2_context": ctx,
+        "workflow_steps": steps,
+        "current_step": "calc_claim2_medicare_d",
+        "audit_event_ids": list(state.get("audit_event_ids", [])) + [eid],
+    }
+
+
+def calc_claim2_margin_node(state: ClaimWorkflowState) -> dict[str, Any]:
+    mtx = state.get("safe_claim") or {}
+    ctx = _cc2_ctx_from_state(state)
+    audit = get_audit_logger()
+    claim_id = state.get("claim_id", "UNKNOWN")
+    cost = ctx.get("cost")
+    if not cost:
+        ctx["return_code"] = 6
+    else:
+        try:
+            copay_after = _cc2_copay_after_medicare(ctx)
+            ctx["margin"] = MarginProcessor().process_margin(mtx, cost, copay_after)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("calc_claim2 margin: %s", exc)
+            ctx["return_code"] = 6
+            ctx["error_message"] = str(exc)
+    steps = list(state.get("workflow_steps", [])) + ["calc_claim2_margin"]
+    eid = audit.log(
+        "CALC_CLAIM2_STAGE",
+        claim_id=claim_id,
+        actor="MarginProcessor",
+        details={"stage": "processMargin"},
+        session_id=state.get("session_id", ""),
+        outcome="ERROR" if ctx.get("return_code") == 6 else "SUCCESS",
+    )
+    return {
+        "calc_claim2_context": ctx,
+        "workflow_steps": steps,
+        "current_step": "calc_claim2_margin",
+        "audit_event_ids": list(state.get("audit_event_ids", [])) + [eid],
+    }
+
+
+def calc_claim2_deductible_cap_node(state: ClaimWorkflowState) -> dict[str, Any]:
+    mtx = state.get("safe_claim") or {}
+    ctx = _cc2_ctx_from_state(state)
+    audit = get_audit_logger()
+    claim_id = state.get("claim_id", "UNKNOWN")
+    margin = ctx.get("margin") or {}
+    try:
+        ctx["deductible_cap"] = DeductibleCapProcessor().process_deductible_and_caps(
+            mtx, _cc2_copay_after_medicare(ctx), margin
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("calc_claim2 deductible_cap: %s", exc)
+        ctx["return_code"] = 6
+        ctx["error_message"] = str(exc)
+    steps = list(state.get("workflow_steps", [])) + ["calc_claim2_deductible_cap"]
+    eid = audit.log(
+        "CALC_CLAIM2_STAGE",
+        claim_id=claim_id,
+        actor="DeductibleCapProcessor",
+        details={"stage": "processDeductibleAndCaps"},
+        session_id=state.get("session_id", ""),
+        outcome="ERROR" if ctx.get("return_code") == 6 else "SUCCESS",
+    )
+    return {
+        "calc_claim2_context": ctx,
+        "workflow_steps": steps,
+        "current_step": "calc_claim2_deductible_cap",
+        "audit_event_ids": list(state.get("audit_event_ids", [])) + [eid],
+    }
+
+
+def calc_claim2_special_node(state: ClaimWorkflowState) -> dict[str, Any]:
+    mtx = state.get("safe_claim") or {}
+    ctx = _cc2_ctx_from_state(state)
+    audit = get_audit_logger()
+    claim_id = state.get("claim_id", "UNKNOWN")
+    cost = ctx.get("cost") or {}
+    try:
+        ctx["special"] = SpecialProcessor().process_special_cases(
+            mtx,
+            {
+                "total_cost_basis": cost.get("total_cost_basis"),
+                "copay": _cc2_copay_after_medicare(ctx),
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("calc_claim2 special: %s", exc)
+        ctx["return_code"] = 6
+        ctx["error_message"] = str(exc)
+    steps = list(state.get("workflow_steps", [])) + ["calc_claim2_special"]
+    eid = audit.log(
+        "CALC_CLAIM2_STAGE",
+        claim_id=claim_id,
+        actor="SpecialProcessor",
+        details={"stage": "processSpecialCases"},
+        session_id=state.get("session_id", ""),
+        outcome="ERROR" if ctx.get("return_code") == 6 else "SUCCESS",
+    )
+    return {
+        "calc_claim2_context": ctx,
+        "workflow_steps": steps,
+        "current_step": "calc_claim2_special",
+        "audit_event_ids": list(state.get("audit_event_ids", [])) + [eid],
+    }
+
+
+def calc_claim2_orchestrator_node(state: ClaimWorkflowState) -> dict[str, Any]:
+    mtx = state.get("safe_claim") or {}
+    ctx = _cc2_ctx_from_state(state)
+    audit = get_audit_logger()
+    claim_id = state.get("claim_id", "UNKNOWN")
+    try:
+        orch = ClaimCalculationOrchestrator()
+        ctx["orchestrator"] = orch.validate_results(ctx, mtx)
+        ctx["return_code"] = int((ctx["orchestrator"] or {}).get("return_code", 0))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("calc_claim2 orchestrator: %s", exc)
+        ctx["return_code"] = 6
+        ctx["error_message"] = str(exc)
+    steps = list(state.get("workflow_steps", [])) + ["calc_claim2_orchestrator"]
+    eid = audit.log(
+        "CALC_CLAIM2_STAGE",
+        claim_id=claim_id,
+        actor="ClaimCalculationOrchestrator",
+        details={
+            "stage": "validateResults",
+            "return_code": ctx.get("return_code"),
+            "validated": (ctx.get("orchestrator") or {}).get("validated"),
+        },
+        session_id=state.get("session_id", ""),
+        outcome="ERROR" if ctx.get("return_code") == 6 else "SUCCESS",
+    )
+    return {
+        "calc_claim2_context": ctx,
+        "workflow_steps": steps,
+        "current_step": "calc_claim2_orchestrator",
+        "audit_event_ids": list(state.get("audit_event_ids", [])) + [eid],
+    }
+
+
 def claims_agent_node(state: ClaimWorkflowState) -> dict[str, Any]:
     """Core adjudication agent (CalcClaim / NCRX workflow)."""
     router = get_model_router()
@@ -479,33 +820,57 @@ def claims_agent_node(state: ClaimWorkflowState) -> dict[str, Any]:
             "claim JSON and AgentCore context.\n"
         )
 
+    cc2 = state.get("calc_claim2_context") or {}
+    cc2_block = (
+        "\n\n--- calcClaim2 pipeline (deterministic demo — CostCore, Copay, MedicareD, "
+        "Margin, DeductibleCap, Special, Orchestrator validateResults) ---\n"
+        f"{json.dumps(cc2, indent=2, default=str)}\n"
+        "--- End calcClaim2 ---\n"
+        "Use ``orchestrator.patient_pay_demo`` / ``orchestrator.plan_pay_demo`` for copay "
+        "and plan_pay when consistent with clinical status.\n"
+    )
+
     messages = [
         SystemMessage(content=CLAIMS_AGENT_SYSTEM),
         HumanMessage(content=(
             f"Adjudicate this claim:\n"
             f"```json\n{json.dumps(safe_claim, indent=2)}\n```\n\n"
             f"Action requested: {state.get('action', 'adjudicate')}"
-            f"{ac_block}{mcp_block}"
+            f"{ac_block}{mcp_block}{cc2_block}"
         )),
     ]
 
-    try:
-        response = llm.invoke(messages)
-        content = response.content
-        result = json.loads(content)
-    except Exception as exc:
-        logger.warning("Claims agent parse error: %s", exc)
-        result = {
-            "status": "pending_review",
-            "reject_code": None,
-            "reject_reason": f"Agent parse error: {exc}",
-            "copay": 0.0,
-            "plan_pay": 0.0,
-            "dur_alerts": [],
-            "reasoning": "Parse error — flagged for review",
-            "confidence": 0.0,
-        }
+    result: dict[str, Any]
+    content: str
+
+    if _use_synthetic_claims_agent_only():
+        result = _synthetic_adjudication_from_calc_claim2(state, llm_error="CALCLAIM_SYNTHETIC_CLAIMS_AGENT=true")
         content = json.dumps(result)
+        logger.info("Claims agent: synthetic-only mode (no Bedrock invoke)")
+    else:
+        try:
+            response = llm.invoke(messages)
+            content = response.content
+            result = json.loads(content)
+        except Exception as exc:
+            err = str(exc)
+            logger.warning("Claims agent parse error: %s", exc)
+            if _synthetic_fallback_on_llm_error() and state.get("calc_claim2_context"):
+                result = _synthetic_adjudication_from_calc_claim2(state, llm_error=err)
+                content = json.dumps(result)
+                logger.info("Claims agent: using calcClaim2 synthetic fallback after LLM error")
+            else:
+                result = {
+                    "status": "pending_review",
+                    "reject_code": None,
+                    "reject_reason": f"Agent parse error: {exc}",
+                    "copay": 0.0,
+                    "plan_pay": 0.0,
+                    "dur_alerts": [],
+                    "reasoning": "Parse error — flagged for review",
+                    "confidence": 0.0,
+                }
+                content = json.dumps(result)
 
     steps = list(state.get("workflow_steps", []))
     steps.append("claims_agent")
@@ -789,6 +1154,7 @@ def response_node(state: ClaimWorkflowState) -> dict[str, Any]:
         "agentcore_ms": ac.get("elapsed_ms"),
         "agentcore_used": bool(ac.get("completion")) and not ac.get("skipped"),
         "mcp_tool_results": mcp_tr if mcp_tr else None,
+        "calc_claim2": state.get("calc_claim2_context"),
     }
 
     return {
@@ -843,6 +1209,13 @@ def build_claims_graph() -> StateGraph:
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("agentcore_calcclaim", agentcore_calcclaim_node)
     graph.add_node("mcp_tools", mcp_tools_node)
+    graph.add_node("calc_claim2_cost_core", calc_claim2_cost_core_node)
+    graph.add_node("calc_claim2_copay", calc_claim2_copay_node)
+    graph.add_node("calc_claim2_medicare_d", calc_claim2_medicare_d_node)
+    graph.add_node("calc_claim2_margin", calc_claim2_margin_node)
+    graph.add_node("calc_claim2_deductible_cap", calc_claim2_deductible_cap_node)
+    graph.add_node("calc_claim2_special", calc_claim2_special_node)
+    graph.add_node("calc_claim2_orchestrator", calc_claim2_orchestrator_node)
     graph.add_node("claims_agent", claims_agent_node)
     graph.add_node("formulary_agent", formulary_node)
     graph.add_node("compliance_agent", compliance_node)
@@ -874,7 +1247,14 @@ def build_claims_graph() -> StateGraph:
     )
 
     graph.add_edge("agentcore_calcclaim", "mcp_tools")
-    graph.add_edge("mcp_tools", "claims_agent")
+    graph.add_edge("mcp_tools", "calc_claim2_cost_core")
+    graph.add_edge("calc_claim2_cost_core", "calc_claim2_copay")
+    graph.add_edge("calc_claim2_copay", "calc_claim2_medicare_d")
+    graph.add_edge("calc_claim2_medicare_d", "calc_claim2_margin")
+    graph.add_edge("calc_claim2_margin", "calc_claim2_deductible_cap")
+    graph.add_edge("calc_claim2_deductible_cap", "calc_claim2_special")
+    graph.add_edge("calc_claim2_special", "calc_claim2_orchestrator")
+    graph.add_edge("calc_claim2_orchestrator", "claims_agent")
     graph.add_edge("claims_agent", "policy_gate")
     graph.add_edge("formulary_agent", "policy_gate")
     graph.add_edge("compliance_agent", "policy_gate")

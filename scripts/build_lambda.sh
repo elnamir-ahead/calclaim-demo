@@ -17,6 +17,9 @@ python3 -m pip install -q -r "$REQ_FILE" -t "$PACKAGE_DIR" --upgrade
 echo "==> Copy application code..."
 cp -R "$PROJECT_ROOT/src" "$PACKAGE_DIR/"
 cp -R "$PROJECT_ROOT/lambda" "$PACKAGE_DIR/"
+if [[ -d "$PROJECT_ROOT/web" ]]; then
+  cp -R "$PROJECT_ROOT/web" "$PACKAGE_DIR/"
+fi
 
 # Drop dev-only / bulky paths if present inside package
 rm -rf "$PACKAGE_DIR"/tests "$PACKAGE_DIR"/__pycache__ 2>/dev/null || true

@@ -35,6 +35,9 @@ class ClaimWorkflowState(TypedDict, total=False):
     # MCP (Model Context Protocol) tool results — optional enrichment before claims_agent
     mcp_tool_results: dict[str, Any]
 
+    # calcClaim2 modular pipeline (deterministic demo — mirrors C++ component stages)
+    calc_claim2_context: dict[str, Any]  # cost, copay, medicare_d, margin, deductible_cap, special, orchestrator, return_code
+
     # Governance outputs
     pii_entities_found: list[str]
     policy_result: dict[str, Any]
@@ -50,6 +53,9 @@ class ClaimWorkflowState(TypedDict, total=False):
     current_step: str
     workflow_steps: list[str]
     errors: list[str]
+
+    # LaunchDarkly (optional) — effective booleans merged with USE_* env at request time
+    feature_flags: dict[str, Any]
 
     # Final response
     final_response: dict[str, Any]
