@@ -23,6 +23,12 @@ from typing import Any, Optional
 
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Local `uvicorn` does not load `.env`; Lambda uses platform env vars (this is a no-op there).
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(_REPO_ROOT / ".env")
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
@@ -148,10 +154,11 @@ def _get_graph():
 async def _run_workflow(state: dict[str, Any]) -> dict[str, Any]:
     graph = _get_graph()
     callbacks = build_graph_callbacks()
-    if callbacks:
-        result = await graph.ainvoke(state, config={"callbacks": callbacks})
-    else:
-        result = await graph.ainvoke(state)
+    # Always pass config so LangSmith's LangChainTracer is attached when enabled.
+    result = await graph.ainvoke(
+        state,
+        config={"callbacks": callbacks} if callbacks else {},
+    )
     return result.get("final_response", {})
 
 

@@ -4,7 +4,7 @@ Pharmacy benefit claim adjudication demo built on the **Navitus Inference Optimi
 
 ## Architecture
 
-**Detailed write-up:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (request path, REST vs MCP, LangGraph order, AWS mapping, observability, optional Textract). **Request-path diagram:** [docs/calclaim-request-flow.drawio](docs/calclaim-request-flow.drawio) (diagrams.net); Mermaid: [docs/calclaim-request-flow.md](docs/calclaim-request-flow.md).
+**Detailed write-up:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (request path, REST vs MCP, LangGraph order, AWS mapping, observability, optional Textract). **Request-path diagram:** [docs/calclaim-request-flow.drawio](docs/calclaim-request-flow.drawio) (diagrams.net); Mermaid: [docs/calclaim-request-flow.md](docs/calclaim-request-flow.md). **Navitus-style end-to-end (updated for calcClaim2, MCP, synthetic LLM fallback, response JSON):** [docs/calclaim-navitus-agentic-architecture.drawio](docs/calclaim-navitus-agentic-architecture.drawio).
 
 **Live demo of the five pillars (LLM Gateway, Evaluation, Governance, MCP, Observability):** [docs/DEMO_PILLARS.md](docs/DEMO_PILLARS.md) — call **`GET /demo/pillars`** and **`POST /demo/governance/policy-probe`** on the deployed API (also listed under the **demo-pillars** tag in **`/docs`**).
 
@@ -95,7 +95,9 @@ calclaim-demo/
 │   ├── DEMO_PILLARS.md                      # Five pillars — API demo endpoints
 │   ├── calclaim-architecture-flow.png       # LangGraph flow (image)
 │   ├── calclaim-architecture-aws-native.png # AWS view (raster; may lag SVG)
-│   └── calclaim-architecture-aws-native.svg # AWS + MCP + observability + optional Textract
+│   ├── calclaim-architecture-aws-native.svg # AWS + MCP + observability + optional Textract
+│   ├── calclaim-request-flow.drawio         # Request swimlane (simplified)
+│   └── calclaim-navitus-agentic-architecture.drawio  # Full Navitus-style demo (calcClaim2, JSON)
 ├── src/
 │   ├── data/
 │   │   └── fake_data.py          # Fake member/claim/drug/pharmacy data

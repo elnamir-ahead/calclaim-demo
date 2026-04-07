@@ -77,6 +77,32 @@ def get_langsmith_client() -> Optional[Client]:
         return None
 
 
+def build_langsmith_tracer_callback() -> Optional[Any]:
+    """
+    LangChainTracer for ``graph.ainvoke(..., config={"callbacks": [...]})``.
+
+    Relying on LANGCHAIN_TRACING_V2 alone often does not attach runs from compiled
+    LangGraph async invocations; passing this callback makes traces show in LangSmith.
+    """
+    key = os.getenv("LANGCHAIN_API_KEY", "").strip()
+    if not _langsmith_key_is_valid(key):
+        return None
+    if os.getenv("LANGCHAIN_TRACING_V2", "true").lower() in (
+        "false",
+        "0",
+        "no",
+        "off",
+    ):
+        return None
+    try:
+        from langchain_core.tracers import LangChainTracer
+
+        return LangChainTracer()
+    except Exception as exc:
+        logger.warning("LangSmith LangChainTracer failed: %s", exc)
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Trace metadata helpers
 # ---------------------------------------------------------------------------

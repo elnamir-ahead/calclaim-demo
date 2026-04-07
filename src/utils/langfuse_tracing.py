@@ -13,6 +13,8 @@ import logging
 import os
 from typing import Any, Optional
 
+from src.utils.langsmith_config import build_langsmith_tracer_callback
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,6 +46,12 @@ def build_langfuse_callback() -> Optional[Any]:
 
 
 def build_graph_callbacks() -> list[Any]:
-    """Callbacks list for ``graph.ainvoke(..., config={"callbacks": ...})``."""
+    """Callbacks for ``graph.ainvoke`` — LangSmith tracer + optional Langfuse."""
+    out: list[Any] = []
+    ls = build_langsmith_tracer_callback()
+    if ls is not None:
+        out.append(ls)
     cb = build_langfuse_callback()
-    return [cb] if cb is not None else []
+    if cb is not None:
+        out.append(cb)
+    return out

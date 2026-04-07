@@ -100,6 +100,12 @@ jobs:
             -backend-config="key=calclaim-demo/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}"
 
+      # If /calclaim/audit was created outside Terraform (or state was reset), adopt it so apply does not hit ResourceAlreadyExistsException.
+      - name: Terraform import audit log group (best-effort)
+        working-directory: terraform
+        run: terraform import -input=false aws_cloudwatch_log_group.audit /calclaim/audit
+        continue-on-error: true
+
       - name: Terraform Apply
         working-directory: terraform
         env:
