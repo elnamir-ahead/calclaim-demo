@@ -180,6 +180,59 @@ body {
   font-size: 1.15rem;
 }
 
+.gateway-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.gateway-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.gateway-status-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+}
+
+.gateway-status-item dt {
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gateway-status-item dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.pill-ok,
+.pill-off {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
+.pill-ok {
+  color: var(--success);
+  background: rgba(94, 207, 140, 0.2);
+}
+
+.pill-off {
+  color: #ff8a98;
+  background: rgba(232, 93, 111, 0.2);
+}
+
 .tabs {
   display: flex;
   gap: 0.25rem;

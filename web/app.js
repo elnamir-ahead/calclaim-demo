@@ -37,6 +37,53 @@
     el.classList.toggle("hidden", !msg);
   }
 
+  function boolPill(v) {
+    return `<span class="${v ? "pill-ok" : "pill-off"}">${v ? "Active" : "Off"}</span>`;
+  }
+
+  async function getJson(path) {
+    const base = apiBase();
+    const url = `${base}${path}`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(text.slice(0, 200) || `HTTP ${res.status}`);
+    }
+    if (!res.ok) {
+      const detail = data.detail || data.message || JSON.stringify(data);
+      throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    }
+    return data;
+  }
+
+  function renderGatewayStatus(pillar) {
+    const host = document.getElementById("gateway-status");
+    const c = pillar.components || {};
+    host.innerHTML = `
+      <div class="gateway-status-grid">
+        <dl class="gateway-status-item"><dt>Edge API Gateway + Lambda</dt><dd>${boolPill(!!(c.edge_api_gateway_lambda && c.edge_api_gateway_lambda.active))}</dd></dl>
+        <dl class="gateway-status-item"><dt>Bedrock Converse</dt><dd>${boolPill(!!(c.amazon_bedrock_converse && c.amazon_bedrock_converse.active))}</dd></dl>
+        <dl class="gateway-status-item"><dt>Model Router</dt><dd>${boolPill(!!(c.model_router && c.model_router.active))}</dd></dl>
+        <dl class="gateway-status-item"><dt>Guardrails</dt><dd>${boolPill(!!(c.bedrock_guardrails && c.bedrock_guardrails.active))}</dd></dl>
+        <dl class="gateway-status-item"><dt>AgentCore InvokeAgent</dt><dd>${boolPill(!!(c.agentcore_invoke_agent && c.agentcore_invoke_agent.active))}</dd></dl>
+      </div>
+    `;
+  }
+
+  async function refreshGatewayStatus() {
+    const host = document.getElementById("gateway-status");
+    host.innerHTML = `<p class="muted">Loading gateway status…</p>`;
+    try {
+      const data = await getJson("/demo/pillars/llm_gateway");
+      renderGatewayStatus(data || {});
+    } catch (e) {
+      host.innerHTML = `<p class="muted">Could not load gateway status: ${escapeHtml(e.message || String(e))}</p>`;
+    }
+  }
+
   function buildGuidedClaim() {
     const drugSel = document.getElementById("guided-drug");
     const planSel = document.getElementById("guided-plan");
@@ -352,6 +399,13 @@
     });
   }
 
+  function initGatewayStatus() {
+    document.getElementById("btn-refresh-gateway").addEventListener("click", () => {
+      refreshGatewayStatus();
+    });
+    refreshGatewayStatus();
+  }
+
   document.getElementById("btn-quick").addEventListener("click", async () => {
     setError("");
     setStatus("Running LangGraph adjudication…", true);
@@ -437,5 +491,6 @@
   initTabs();
   initGuided();
   initSettings();
+  initGatewayStatus();
   document.getElementById("claim-json").value = SAMPLE_JSON;
 })();

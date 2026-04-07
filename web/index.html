@@ -48,6 +48,17 @@
       </ul>
     </section>
 
+    <section class="panel" aria-labelledby="llm-gateway-heading">
+      <div class="gateway-header">
+        <h2 id="llm-gateway-heading">LLM Gateway status</h2>
+        <button type="button" class="btn btn-secondary" id="btn-refresh-gateway">Refresh gateway status</button>
+      </div>
+      <p class="lede">Live status from <code>GET /demo/pillars/llm_gateway</code> for stakeholder demos.</p>
+      <div id="gateway-status" class="summary-card">
+        <p class="muted">Loading gateway status…</p>
+      </div>
+    </section>
+
     <section class="panel cc2-qa-panel" aria-labelledby="cc2-heading">
       <h2 id="cc2-heading">calcClaim2 engine &amp; PDF test alignment</h2>
       <p class="lede">
