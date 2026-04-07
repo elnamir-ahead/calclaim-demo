@@ -11,6 +11,11 @@ output "dynamodb_claims_table" {
   value = aws_dynamodb_table.claims.name
 }
 
+output "s3_audit_bucket" {
+  value       = aws_s3_bucket.audit_archive.id
+  description = "S3 bucket for immutable audit JSON archives (audit_logger)"
+}
+
 output "dynamodb_audit_table" {
   value = aws_dynamodb_table.audit.name
 }

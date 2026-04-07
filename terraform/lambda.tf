@@ -22,31 +22,32 @@ resource "aws_lambda_function" "api" {
     variables = merge(
       {
         # AWS_REGION is reserved — Lambda sets it automatically; do not pass it here.
-        BEDROCK_REGION             = var.aws_region
-        ENVIRONMENT                = "prod"
-        DEMO_MODE                  = "false"
-        LOG_LEVEL                  = "INFO"
-        LOG_FORMAT                 = var.log_format
-        TRUST_API_GATEWAY_AUTH     = var.enable_jwt_authorizer ? "true" : "false"
-        REQUIRE_AUTH               = "false"
-        DYNAMODB_CLAIMS_TABLE      = aws_dynamodb_table.claims.name
-        DYNAMODB_AUDIT_TABLE       = aws_dynamodb_table.audit.name
-        DYNAMODB_SESSION_TABLE     = aws_dynamodb_table.sessions.name
-        HITL_SNS_TOPIC_ARN         = aws_sns_topic.hitl.arn
-        LANGCHAIN_PROJECT          = var.project_name
-        LANGCHAIN_ENDPOINT         = "https://api.smith.langchain.com"
-        LANGCHAIN_TRACING_V2       = var.langchain_tracing_v2
-        BEDROCK_GUARDRAIL_ID       = var.bedrock_guardrail_id
-        BEDROCK_GUARDRAIL_VERSION  = "DRAFT"
-        USE_OPA                    = var.use_opa ? "true" : "false"
-        OPA_SERVER_URL             = var.opa_server_url
-        CORS_ALLOW_ORIGINS         = length(var.cors_allow_origins) == 1 && var.cors_allow_origins[0] == "*" ? "*" : join(",", var.cors_allow_origins)
-        ENABLE_CLOUDWATCH_EMF      = "true"
-        USE_AGENTCORE              = var.use_agentcore
-        AGENTCORE_AGENT_ID         = var.agentcore_agent_id
-        AGENTCORE_AGENT_ALIAS_ID   = var.agentcore_agent_alias_id
-        CALCLAIM_MCP_URL           = var.calclaim_mcp_url
-        USE_MCP_TOOLS              = var.use_mcp_tools
+        BEDROCK_REGION            = var.aws_region
+        ENVIRONMENT               = "prod"
+        DEMO_MODE                 = "false"
+        LOG_LEVEL                 = "INFO"
+        LOG_FORMAT                = var.log_format
+        TRUST_API_GATEWAY_AUTH    = var.enable_jwt_authorizer ? "true" : "false"
+        REQUIRE_AUTH              = "false"
+        DYNAMODB_CLAIMS_TABLE     = aws_dynamodb_table.claims.name
+        DYNAMODB_AUDIT_TABLE      = aws_dynamodb_table.audit.name
+        S3_AUDIT_BUCKET           = aws_s3_bucket.audit_archive.id
+        DYNAMODB_SESSION_TABLE    = aws_dynamodb_table.sessions.name
+        HITL_SNS_TOPIC_ARN        = aws_sns_topic.hitl.arn
+        LANGCHAIN_PROJECT         = var.project_name
+        LANGCHAIN_ENDPOINT        = "https://api.smith.langchain.com"
+        LANGCHAIN_TRACING_V2      = var.langchain_tracing_v2
+        BEDROCK_GUARDRAIL_ID      = var.bedrock_guardrail_id
+        BEDROCK_GUARDRAIL_VERSION = "DRAFT"
+        USE_OPA                   = var.use_opa ? "true" : "false"
+        OPA_SERVER_URL            = var.opa_server_url
+        CORS_ALLOW_ORIGINS        = length(var.cors_allow_origins) == 1 && var.cors_allow_origins[0] == "*" ? "*" : join(",", var.cors_allow_origins)
+        ENABLE_CLOUDWATCH_EMF     = "true"
+        USE_AGENTCORE             = var.use_agentcore
+        AGENTCORE_AGENT_ID        = var.agentcore_agent_id
+        AGENTCORE_AGENT_ALIAS_ID  = var.agentcore_agent_alias_id
+        CALCLAIM_MCP_URL          = var.calclaim_mcp_url
+        USE_MCP_TOOLS             = var.use_mcp_tools
       },
       var.langchain_api_key != "" ? { LANGCHAIN_API_KEY = var.langchain_api_key } : {}
     )

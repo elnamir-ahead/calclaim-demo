@@ -44,7 +44,7 @@ resource "aws_apigatewayv2_route" "proxy" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 
   authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE"
-  authorizer_id        = var.enable_jwt_authorizer ? aws_apigatewayv2_authorizer.jwt[0].id : null
+  authorizer_id      = var.enable_jwt_authorizer ? aws_apigatewayv2_authorizer.jwt[0].id : null
 }
 
 resource "aws_apigatewayv2_stage" "default" {

@@ -17,6 +17,7 @@ import uuid
 import hashlib
 import logging
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any, Literal, Optional
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,17 @@ class AuditEvent:
         """SHA-256 of deterministic fields — used to detect tampering."""
         payload = f"{self.event_id}:{self.event_type}:{self.claim_id}:{self.timestamp_utc}"
         return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def _floats_to_decimal(value: Any) -> Any:
+    """DynamoDB does not accept Python float; use Decimal for numeric fields."""
+    if isinstance(value, float):
+        return Decimal(str(value))
+    if isinstance(value, dict):
+        return {k: _floats_to_decimal(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_floats_to_decimal(v) for v in value]
+    return value
 
 
 class AuditLogger:
@@ -163,8 +175,10 @@ class AuditLogger:
 
     def _write_dynamo(self, record: dict[str, Any]) -> None:
         try:
+            item = _floats_to_decimal(dict(record))
+            item["ttl"] = int(datetime.utcnow().timestamp()) + (365 * 86400)
             self._dynamo.put_item(
-                Item={**record, "ttl": int(datetime.utcnow().timestamp()) + (365 * 86400)},
+                Item=item,
                 ConditionExpression="attribute_not_exists(event_id)",  # immutability guard
             )
         except Exception as exc:
