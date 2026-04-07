@@ -62,6 +62,7 @@ from src.utils.launchdarkly_flags import (
     shutdown_launchdarkly,
 )
 from src.utils.langfuse_tracing import build_graph_callbacks
+from langchain_core.tracers.langchain import wait_for_all_tracers
 
 logger = logging.getLogger(__name__)
 
@@ -154,12 +155,19 @@ def _get_graph():
 async def _run_workflow(state: dict[str, Any]) -> dict[str, Any]:
     graph = _get_graph()
     callbacks = build_graph_callbacks()
-    # Always pass config so LangSmith's LangChainTracer is attached when enabled.
-    result = await graph.ainvoke(
-        state,
-        config={"callbacks": callbacks} if callbacks else {},
-    )
-    return result.get("final_response", {})
+    try:
+        # Always pass config so LangSmith's LangChainTracer is attached when enabled.
+        result = await graph.ainvoke(
+            state,
+            config={"callbacks": callbacks} if callbacks else {},
+        )
+        return result.get("final_response", {})
+    finally:
+        # Lambda freezes right after the response; flush so LangSmith runs don't stay "running".
+        try:
+            wait_for_all_tracers()
+        except Exception as exc:
+            logger.debug("LangSmith tracer flush skipped: %s", exc)
 
 
 # ---------------------------------------------------------------------------
