@@ -389,6 +389,7 @@ def supervisor_node(state: ClaimWorkflowState) -> dict[str, Any]:
     return {
         "intent": intent,
         "routed_agent": routed_agent,
+        "supervisor_reasoning": reasoning,
         "messages": [AIMessage(content=content, name="supervisor")],
         "current_step": "supervisor",
         "workflow_steps": steps,
@@ -914,6 +915,7 @@ def formulary_node(state: ClaimWorkflowState) -> dict[str, Any]:
 
     return {
         "adjudication_result": result,
+        "adjudication_reasoning": result.get("reasoning", ""),
         "messages": [AIMessage(content=content, name="formulary_agent")],
         "current_step": "formulary_agent",
         "workflow_steps": steps,
@@ -1135,6 +1137,7 @@ def response_node(state: ClaimWorkflowState) -> dict[str, Any]:
 
     ac = state.get("agentcore_result") or {}
     mcp_tr = state.get("mcp_tool_results") or {}
+    reasoning_text = (state.get("adjudication_reasoning") or adj.get("reasoning") or "").strip()
     final = {
         "correlation_id": state.get("correlation_id"),
         "claim_id": claim_id,
@@ -1146,6 +1149,13 @@ def response_node(state: ClaimWorkflowState) -> dict[str, Any]:
             "plan_pay": adj.get("plan_pay", 0.0),
         },
         "dur_alerts": adj.get("dur_alerts", []),
+        # LLM narrative (prompts ask for a "reasoning" field; surfaced here and in LangSmith spans)
+        "reasoning": reasoning_text or None,
+        "routing": {
+            "intent": state.get("intent"),
+            "routed_agent": state.get("routed_agent"),
+            "supervisor_reasoning": (state.get("supervisor_reasoning") or "").strip() or None,
+        },
         "hitl_resolution": state.get("hitl_resolution"),
         "workflow_steps": state.get("workflow_steps", []),
         "confidence": adj.get("confidence"),

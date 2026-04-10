@@ -28,6 +28,7 @@ class ClaimWorkflowState(TypedDict, total=False):
     # Supervisor routing
     intent: str                        # classified intent
     routed_agent: str                  # "claims_agent" | "formulary_agent" | etc.
+    supervisor_reasoning: str          # short routing rationale from supervisor LLM JSON
 
     # Amazon Bedrock AgentCore (CalcClaim tool server — invoke_agent)
     agentcore_result: dict[str, Any]   # completion, trace, elapsed_ms, session_id
