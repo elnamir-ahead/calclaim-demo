@@ -3,7 +3,7 @@
 # Deployment uses S3 + Lambda (terraform) to avoid direct-upload size limits in CI.
 # Full project: requirements.txt locally.
 langgraph>=0.2.0
-langchain-core>=0.3.0
+langchain-core>=1.3.2
 langchain-aws>=0.2.0
 langsmith>=0.1.0
 langfuse>=2.0.0
