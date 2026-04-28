@@ -1,2 +1,2 @@
 # MCP server only — Python >= 3.10 (not bundled into CalcClaim Lambda zip by default)
-mcp[cli]>=1.2.0,<2
+mcp[cli]>=1.27.0,<2
