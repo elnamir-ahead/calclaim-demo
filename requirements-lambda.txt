@@ -2,7 +2,7 @@
 # Use langchain-core — NOT the full "langchain" package (that bundle pulls huge vectorstore extras).
 # Deployment uses S3 + Lambda (terraform) to avoid direct-upload size limits in CI.
 # Full project: requirements.txt locally.
-langgraph>=0.2.0
+langgraph>=1.1.10
 langchain-core>=0.3.0
 langchain-aws>=0.2.0
 langsmith>=0.1.0
